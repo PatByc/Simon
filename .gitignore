@@ -27,10 +27,10 @@ Thumbs.db
 .idea/
 
 # Claude specific
-.claude/
+# .claude/
 
 # Codex specific
-.codex/
+#.codex/
 
 # Testing
 playwright-report/
