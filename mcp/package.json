@@ -1,0 +1,41 @@
+{
+  "name": "@simon/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Policy-controlled engineering MCP server for Simon",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build": "npm run build:ts && npm run worker:build",
+    "build:ts": "tsc -p tsconfig.json",
+    "docs": "tsx scripts/generate-tool-mapping.ts",
+    "qualify:live": "tsx scripts/live-qualify.ts",
+    "start": "node dist/src/main.js",
+    "test": "vitest run && npm run worker:test",
+    "test:ts": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "worker:build": "dotnet build worker/tia/v20/server/TiaMcpServer.csproj -c Release -p:RestoreLockedMode=true",
+    "worker:restore": "dotnet restore worker/tia/v20/server/TiaMcpServer.csproj -p:RestoreLockedMode=true",
+    "worker:test": "dotnet test worker/tia/v20/test/TiaMcpServer.Unit.csproj -c Release -p:RestoreLockedMode=true"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  }
+}

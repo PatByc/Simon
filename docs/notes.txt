@@ -1,0 +1,16 @@
+- i guess other conversations are simply stored in the db with lets say 20 messages back. 
+how are they beeing injected into the context if i resume an old chat?
+
+- wiecej tematow z todai chatrooma:
+-- sprite klikania w klawiature zamiast czytania
+-- ikona z ./ poki co
+
+- run on startup setting
+
+- the setup should be simple:
+1. open your local ai editor (codex, claude code, pi) or web editor
+(chat GPT, claude) and paste this prompt
+2. [prompt]
+
+
+regarding the UI the chat sidebar should be evoked with an icon and not be omnipresent

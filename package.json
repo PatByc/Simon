@@ -1,0 +1,29 @@
+{
+  "name": "simon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Pi-powered assistant application",
+  "workspaces": [
+    "app/*",
+    "packages/*",
+    "mcp"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "predev": "npm run build --workspace @simon/contracts",
+    "dev": "concurrently --kill-others-on-fail --names server,web \"npm run dev:server\" \"npm run dev:web\"",
+    "dev:web": "npm run dev --workspace @simon/web",
+    "dev:server": "npm run dev --workspace @simon/server",
+    "start": "npm run build && npm run start --workspace @simon/server",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

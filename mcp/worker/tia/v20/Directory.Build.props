@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <RestoreLockedMode>true</RestoreLockedMode>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+</Project>

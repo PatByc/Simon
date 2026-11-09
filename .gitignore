@@ -6,6 +6,7 @@ node_modules/
 dist/
 build/
 coverage/
+*.tsbuildinfo
 
 # Environment files
 .env
@@ -35,6 +36,10 @@ Thumbs.db
 # Testing
 playwright-report/
 test-results/
+
+# Local Simon runtime data
+/data/*
+!/data/.gitkeep
 
 # Misc
 *.pem

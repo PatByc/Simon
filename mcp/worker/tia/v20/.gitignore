@@ -1,0 +1,10 @@
+server/bin/
+server/obj/
+test/bin/
+test/obj/
+TestResults/
+*.ap20
+*.zap20
+*.s7dcl
+*.s7res
+exports/

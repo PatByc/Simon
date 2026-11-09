@@ -1,0 +1,68 @@
+provider: Siemens TIA Portal Openness
+slug: openess
+canonical_docs: https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api
+api_base_url: null
+openapi_url: null
+llms_txt_url: null
+docs_repository: null
+source_repository: null
+sdk_repository: null
+package: null
+retrieved_at: 2026-11-08T09:29:01Z
+api_version: V20
+source_revision: null
+license: citation-only
+publication:
+  title: 'TIA Portal Openness: API for automation of engineering workflows'
+  software_version: 20.00.00.00
+  language: en-US
+  publication_date: 2025-01
+  last_publication: 2025-01-17
+  party: Siemens Aktiengesellschaft
+  source_id: TIA_Openness_V20_ftml
+local_baseline:
+  installation_root: 'C:\Program Files\Siemens\Automation\Portal V20\PublicAPI'
+  assembly: 'V20\Siemens.Engineering.dll'
+  assembly_version: 20.0.0.0
+  file_product_version: 2000.7.201.2
+  assembly_sha256: 94fa4550e591469842a38cd7a63625770787142607f71a9e0eec5907734c529f
+  module_mvid: 1c1171fa-f5d8-4a1c-b822-c46b4ea0bcb3
+  xml_documentation_sha256: 76e2e3901611bd0754d18e19b7bbc3c8713ce13572ae062a7a25f5571e8d597b
+analysis:
+  tool: rea-agents
+  version: 6.5.0
+  execution: static-only
+  evidence_ids:
+    - ev_1ca310e4e0f665b337808d567df45b9f83209d7139bc70df07a155d3f25999a7
+    - ev_9924163593006676228390ade2409c76c0955ecbe357a6427d0059178b65cded
+documentation_extraction:
+  method: isolated local Chrome rendering plus read-only CDP shadow-DOM extraction
+  official_topics_read: 19
+  retained_full_text: false
+  evidence_ledger: evidence/OFFICIAL_DOCS.md
+canonical_pages:
+  - https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/general-functions/connecting-to-the-tia-portal
+  - https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/general-functions/transaction-handling
+  - https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-projects-and-project-data/compiling-a-project
+  - https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/export/import/importing/exporting-data-of-a-plc-device/blocks/exporting-blocks
+  - https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/export/import/importing/exporting-data-of-a-plc-device/blocks/exporting-program-block-as-document
+  - https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/export/import/importing/exporting-data-of-a-plc-device/blocks/importing-program-block-from-document
+  - https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-accessing-the-data-of-a-plc-device/blocks/generate-source-from-block
+  - https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-accessing-the-data-of-a-plc-device/functions-for-accessing-plc-service/getting-cross-references-for-step7
+artifacts:
+  - path: REFERENCE.md
+    source: local synthesis from directly rendered Siemens V20 documentation and installed V20 PublicAPI
+    sha256: 1ca0ab9a62b77659209a49553459bdb49df7823752d93503fb5a387c933a0a0c
+  - path: evidence/LOCAL_ARTIFACTS.md
+    source: read-only local artifact inventory and REA static evidence
+    sha256: 96c075f8c4082b60f4bfba08298b1e26c1fc14dce42d57df71e031af95745827
+  - path: evidence/API_SURFACE.md
+    source: installed V20 Siemens.Engineering.dll and companion XML API documentation
+    sha256: 23a1a065ee51924820d53fe39c20dd421e51158b722f49e4a1e19229ed400618
+  - path: evidence/OFFICIAL_DOCS.md
+    source: 19 official Siemens V20 topics rendered in isolated local Chrome and synthesized without retaining full text
+    sha256: ffb2c15ee16db952df155d11298b344e53d40306aa60920bc1cc7b36206d167e
+notes:
+  - Siemens documentation pages are JavaScript-rendered; selected pages were read through local browser rendering and retained as citation-only synthesis with page-text hashes.
+  - No Siemens binary, XML documentation file, XSD, PDF, project export, credential, or customer artifact was copied into the repository.
+  - The destination spelling openess follows the existing user-selected directory.
