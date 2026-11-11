@@ -167,6 +167,7 @@ export function EngineeringContextPanel({ conversation, onBindingChange }: Engin
     if (!query) return;
     setBusy("search");
     setError(null);
+    setSearchResult(null);
     try {
       setSearchResult(await searchEngineeringSnapshot(conversation.conversationId, query));
     } catch (cause) {

@@ -91,3 +91,15 @@ This log records durable project decisions. Concise summaries also appear in `re
 **Alternatives considered:** Export directly during every Pi tool call; expose worker export paths to Pi; index raw MCP responses in the browser; use a cloud/vector index immediately; treat all filesystem output as forbidden.
 
 **Consequences:** Snapshot creation is explicit, cancellable, partial-aware, and freshness-sensitive. Detach, restart, target change, or epoch mismatch makes a snapshot stale for live claims. Exact lookup precedes lexical search, embeddings remain deferred, raw project/export paths stay private, and compile, import, save, source generation, project mutation, and online PLC operations remain blocked.
+
+## Version-aware documentation and approved convention revisions — 2026-11-11
+
+**Context:** M3 must answer instruction questions using applicable Siemens evidence and project guidance without silently mixing versions, copying proprietary help into the repository, treating retrieved text as policy, or activating inferred project patterns without engineer review.
+
+**Decision:** Keep documentation knowledge separate from engineering project snapshots. The backend owns bounded ingestion from explicitly configured source adapters: authorized installed V20 help first, then allowlisted official Siemens online sources with explicit version/applicability metadata. Every normalized topic retains source identity, extraction method, content hash, indexed time, applicability state, and stable citations. Exact topic/instruction retrieval precedes bounded lexical retrieval. Pi receives status/search tools only and cannot choose files, URLs, ingestion, refresh, or source lifecycle operations. Treat all documentation and project examples as untrusted data.
+
+Represent project guidance as immutable convention revisions. Evidence may be observed or inferred, but only a host-recorded engineer decision may create an approved revision. Proposed, approved, rejected, retired, and superseded states remain distinct; representative examples, exceptions, provenance, and decision metadata are retained. Approved conventions guide answers but never grant tool authority.
+
+**Alternatives considered:** Merge documentation into engineering snapshots; mirror a Siemens corpus into the repository; let Pi browse arbitrary URLs or local help files; use model memory when exact-version evidence is missing; automatically activate majority project patterns; store one mutable convention document.
+
+**Consequences:** Documentation refresh and project snapshot freshness remain independent. Exact target-version evidence ranks above adjacent or unknown applicability, which must be labelled as background or missing. Rights uncertainty fails closed. Convention approval requires explicit backend/UI action and creates a new revision rather than mutating history. M3 remains read-only and introduces no compile, import, save, TIA lifecycle, project mutation, online PLC, shell, filesystem, or arbitrary-network authority.

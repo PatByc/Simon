@@ -139,6 +139,10 @@ describe("Simon chat application", () => {
     await user.click(screen.getByRole("tab", { name: /Claude/ }));
     expect(screen.getByText("Claude runtime")).toBeVisible();
     expect(screen.getByText(/not connected yet/)).toBeVisible();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Model and runtime selector" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Model: GPT Test" })).toHaveFocus();
   });
 
   it("shows a synthetic proposal for the demo review command", async () => {

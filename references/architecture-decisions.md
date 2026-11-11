@@ -66,3 +66,10 @@
 **Reason:** Source retrieval must be fast, citable, freshness-aware, and unable to leak export paths or let Pi orchestrate filesystem-producing worker calls.
 **Trade-offs:** Snapshot refresh is explicit and potentially partial; detach, restart, or binding changes stale prior snapshots for live claims. Embeddings are deferred.
 **Date:** 2026-11-11
+
+## ADR-009: Separate version-aware documentation from approved convention revisions
+
+**Decision:** Ingest documentation only through backend-owned configured adapters, prefer authorized installed V20 help before allowlisted official online sources, retain explicit applicability/provenance, and use exact-before-FTS5 retrieval. Keep documentation storage separate from engineering snapshots. Treat project patterns as observed/inferred drafts until a host-recorded engineer decision creates an immutable approved convention revision.
+**Reason:** Instruction claims need source/version evidence, while project conventions need human authority; neither retrieved text nor majority patterns may alter policy or silently become rules.
+**Trade-offs:** Rights or applicability uncertainty fails closed, adjacent-version guidance is background only, refresh workflows are host-controlled, and convention history is append-only rather than a mutable document. Pi receives retrieval tools but no ingestion, URL/file selection, refresh, or approval authority.
+**Date:** 2026-11-11

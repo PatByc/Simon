@@ -3,6 +3,13 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import { buildApp } from "./app.js";
+import { ConventionService } from "./convention-service.js";
+import { ConventionStore } from "./convention-store.js";
+import { ConventionToolProvider } from "./convention-tools.js";
+import { initializeDocumentationSources } from "./documentation-initialization.js";
+import { DocumentationRetrievalService } from "./documentation-retrieval.js";
+import { DocumentationRetrievalToolProvider } from "./documentation-retrieval-tools.js";
+import { DocumentationStore } from "./documentation-store.js";
 import { EngineeringConnectionManager } from "./engineering-connection.js";
 import { EngineeringMcpClient } from "./engineering-mcp-client.js";
 import { EngineeringRetrievalService } from "./engineering-retrieval.js";
@@ -21,6 +28,17 @@ const port = Number.parseInt(process.env.SIMON_PORT ?? "4310", 10);
 const runtimeName = process.env.SIMON_RUNTIME ?? "pi";
 const dataDirectory = resolve(process.env.SIMON_DATA_DIR ?? resolve(projectRoot, "data"));
 const store = new InMemoryStore(resolve(dataDirectory, "simon.sqlite"));
+const documentationStore = new DocumentationStore(resolve(dataDirectory, "documentation.sqlite"));
+const configuredHelpRoot = process.env.SIMON_TIA_V20_HELP_ROOT?.trim();
+const installedHelpRoot = configuredHelpRoot || resolve(process.env.ProgramFiles ?? "C:/Program Files", "Siemens/Automation/Portal V20/Help/en-US");
+initializeDocumentationSources(documentationStore, {
+  installedRoot: installedHelpRoot,
+  packageAllowlist: ["ProgSCL2MenUS.zip", "ProgPLCBasicsenUS.zip", "ProgExtInstr2MenUS.zip"],
+});
+const documentationRetrieval = new DocumentationRetrievalService(documentationStore);
+const documentationRetrievalTools = new DocumentationRetrievalToolProvider(documentationRetrieval);
+const conventions = new ConventionService(new ConventionStore(resolve(dataDirectory, "conventions.sqlite")));
+const conventionTools = new ConventionToolProvider(conventions);
 const engineeringPolicy = getRuntimePolicy();
 const engineeringClient = engineeringPolicy.mode === "tia-readonly"
   ? new EngineeringMcpClient({
@@ -49,7 +67,7 @@ const engineeringRetrievalTools = new EngineeringRetrievalToolProvider(
 );
 const assistant = runtimeName === "fake"
   ? new FakeAssistant(store)
-  : new PiAssistant(store, projectRoot, resolve(dataDirectory, "pi-sessions"), engineering, engineeringRetrievalTools);
+  : new PiAssistant(store, projectRoot, resolve(dataDirectory, "pi-sessions"), engineering, engineeringRetrievalTools, documentationRetrievalTools, conventionTools);
 const app = buildApp({
   logger: true,
   store,
@@ -58,6 +76,8 @@ const app = buildApp({
   engineering,
   snapshots,
   engineeringRetrieval: new EngineeringRetrievalService(),
+  documentationRetrieval,
+  conventions,
 });
 const webRoot = resolve(projectRoot, "app/web/dist");
 

@@ -125,6 +125,7 @@ describe("EngineeringContextPanel", () => {
       coverage: [{ capability: "tia.block.collection", state: "partial", observedCount: 1, note: "One format is partial." }],
     };
     let currentSnapshot: typeof snapshot | null = null;
+    let searchCount = 0;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       let body: unknown;
@@ -133,25 +134,33 @@ describe("EngineeringContextPanel", () => {
       else if (url.endsWith("/engineering/diagnostics")) body = { ...diagnostics, activeBinding: binding };
       else if (url.includes("/engineering-snapshot") && init?.method === "POST") { currentSnapshot = snapshot; body = snapshot; }
       else if (url.includes("/engineering-snapshot")) body = { snapshot: currentSnapshot };
-      else if (url.includes("/engineering-search")) body = {
-        snapshot,
-        query: "restart delay",
-        hits: [{
-          document: {
-            documentId: "b".repeat(64), snapshotId: snapshot.snapshotId, kind: "block", name: "Main",
-            engineeringPath: "Program blocks/Main", parentPath: "Program blocks", language: "SCL",
-            contentDigest: "c".repeat(64), contentLength: 20, artifactId: null, excerpt: "restart delay",
-            attributes: {}, provenance: { snapshotId: snapshot.snapshotId, bindingId: binding.bindingId, bindingEpoch: binding.epoch, observedAt: snapshot.updatedAt, sourceOperation: "tia.block.export", coverage: "complete" },
-          },
-          matchKind: "lexical",
-          score: 0.8,
-          snippet: "Restart delay is five seconds.",
-          citation: { citationId: "d".repeat(64), snapshotId: snapshot.snapshotId, documentId: "b".repeat(64), engineeringPath: "Program blocks/Main", observedAt: snapshot.updatedAt, freshness: "current", coverage: "complete" },
-        }],
-        partial: true,
-        coverage: snapshot.coverage,
-      };
-      else throw new Error(`Unexpected request: ${url}`);
+      else if (url.includes("/engineering-search")) {
+        searchCount += 1;
+        if (searchCount > 1) {
+          return new Response(JSON.stringify({ message: "Engineering query is ambiguous; use an exact engineering path." }), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        body = {
+          snapshot,
+          query: "restart delay",
+          hits: [{
+            document: {
+              documentId: "b".repeat(64), snapshotId: snapshot.snapshotId, kind: "block", name: "Main",
+              engineeringPath: "Program blocks/Main", parentPath: "Program blocks", language: "SCL",
+              contentDigest: "c".repeat(64), contentLength: 20, artifactId: null, excerpt: "restart delay",
+              attributes: {}, provenance: { snapshotId: snapshot.snapshotId, bindingId: binding.bindingId, bindingEpoch: binding.epoch, observedAt: snapshot.updatedAt, sourceOperation: "tia.block.export", coverage: "complete" },
+            },
+            matchKind: "lexical",
+            score: 0.8,
+            snippet: "Restart delay is five seconds.",
+            citation: { citationId: "d".repeat(64), snapshotId: snapshot.snapshotId, documentId: "b".repeat(64), engineeringPath: "Program blocks/Main", observedAt: snapshot.updatedAt, freshness: "current", coverage: "complete" },
+          }],
+          partial: true,
+          coverage: snapshot.coverage,
+        };
+      } else throw new Error(`Unexpected request: ${url}`);
       return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
     }));
 
@@ -166,5 +175,10 @@ describe("EngineeringContextPanel", () => {
     expect(await screen.findByText("Restart delay is five seconds.")).toBeInTheDocument();
     expect(screen.getByText("Program blocks/Main")).toBeInTheDocument();
     expect(screen.getByText(/lexical · complete/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Search current snapshot"), { target: { value: "duplicate" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("ambiguous");
+    expect(screen.queryByText("Restart delay is five seconds.")).not.toBeInTheDocument();
   });
 });

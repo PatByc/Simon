@@ -11,7 +11,7 @@
 - Bounded project inventory, capability reporting, diagnostics, and guarded Pi tools.
 - Application-level live qualification of attach, project inventory, Pi read, detach, and reconnect-required restart behavior.
 
-Manual browser qualification remains tracked in `docs/MANUAL_QA.md` and `docs/M1_CHECKLIST.md`.
+Manual browser qualification and localhost product acceptance are recorded in `docs/MANUAL_QA.md` and `docs/M2_PRODUCT_ACCEPTANCE.md`.
 
 ## Completed — M2 source extraction and retrieval
 
@@ -22,12 +22,21 @@ Manual browser qualification remains tracked in `docs/MANUAL_QA.md` and `docs/M1
 - Added controlled SCL, LAD, FBD, DB, and UDT extraction without enabling writes or reconstructing graphical source.
 - Live-qualified the full Simon path through grounded Pi answers, detach guards, and project-survival checks.
 
-## Now — Documentation and conventions
+## Completed — M3 documentation and conventions
 
-- Discover version-correct Siemens documentation sources.
-- Add sourced instruction retrieval.
-- Infer project conventions from authorized examples and require approval.
-- Keep documented, inferred, and approved guidance distinct.
+- Classified installed matching help before official online material and fail closed on unresolved online-ingestion rights.
+- Added bounded local ZIP/HTML ingestion, deterministic normalization, applicability-first exact/FTS5 retrieval, stable citations, and source-status UI.
+- Added two read-only Pi documentation tools without ingestion, refresh, arbitrary URL/file, or lifecycle authority.
+- Added authorized convention inference, host-only approval/rejection/revision/retirement, immutable revisions, approved-only Pi retrieval, and deterministic non-functional checks.
+- Kept observed project evidence, official documentation, inferred conventions, and approved conventions distinct in contracts, policy, prompts, persistence, and UI.
+- Live-qualified installed STEP 7 V20 Update 7 retrieval, grounded Pi answers, convention lifecycle, and restart persistence.
+
+## Now — Stabilization and release hygiene
+
+- Repeat the complete localhost acceptance gate after M3 integration.
+- Preserve source-rights and privacy evidence and keep official-online ingestion blocked until separately authorized.
+- Keep Electron packaging optional and deferred; the accepted product boundary remains the loopback production application.
+- Do not authorize writes merely because M3 is complete.
 
 ## Later — Controlled engineering changes
 

@@ -94,9 +94,10 @@ describe("EngineeringConnectionManager", () => {
       coverage: expect.arrayContaining([expect.stringContaining("outside M1 coverage")]),
     });
     const capabilities = manager.getCapabilities().capabilities;
-    expect(capabilities.filter((capability) => capability.available)).toHaveLength(23);
+    expect(capabilities.filter((capability) => capability.available)).toHaveLength(27);
     expect(capabilities.filter((capability) => capability.status === "live-tested")).toHaveLength(17);
     expect(capabilities.filter((capability) => capability.status === "partial")).toHaveLength(6);
+    expect(capabilities.filter((capability) => capability.status === "fake-tested")).toHaveLength(4);
     expect(capabilities.find((capability) => capability.capability === "simon_engineering_search")).toMatchObject({
       label: "Search",
       status: "live-tested",

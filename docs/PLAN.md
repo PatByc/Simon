@@ -1,8 +1,10 @@
-# Simon Chat UI and Pi Assistant Plan
+# Simon Implementation Plan and Milestone History
 
-**Status:** Initial foundation and expanded Chat UX implementation completed; manual qualification pending
-**Scope:** Chat UI and AI-assistant runtime only
-**Explicitly excluded:** TIA Portal, Siemens Openness, Fanqi bridge, MCP servers, PLC project access, and engineering mutations
+**Status:** Chat foundation, M1 read-only attachment, and M2 source extraction/retrieval are complete; manual localhost product acceptance is active
+**Current scope:** Chat/Pi runtime plus explicit, conversation-bound, read-only TIA Portal V20 inspection and application-owned snapshot retrieval
+**Explicitly excluded:** Engineering mutation, compile, import, save, project lifecycle mutation, source generation, online PLC operations, arbitrary shell/filesystem access, and model-controlled TIA lifecycle or export operations
+
+The early sections below preserve the original chat-foundation plan and its historical exclusions. Sections 15 and 16 describe the subsequently accepted M1 and M2 application boundary.
 
 ## 1. Goal
 
@@ -18,7 +20,7 @@ Build the reusable Simon chat application described by `AI_ASSISTANT_MCP_HANDOFF
 - a backend-owned Pi session and event adapter;
 - clean contracts that later allow Simon engineering tools to be added without redesigning the UI.
 
-The first release is a general Simon assistant shell. It must not imply that TIA, MCP, project reads, or project writes are connected.
+The original first release was a general Simon assistant shell and was required not to imply unavailable TIA, MCP, project-read, or project-write capabilities. Later milestone amendments add only the explicitly qualified read-only capabilities described below.
 
 ### Implementation checkpoint — 2026-11-07
 
@@ -420,7 +422,7 @@ The next phase should introduce a small Simon domain-tool interface behind the e
 
 The chat/runtime foundation above was completed and qualified. The original exclusions remain the definition of done for that first slice, but they no longer describe the current application boundary.
 
-The second phase adds a Simon-owned MCP package and an incorporated, attributed TIA Portal V20/Siemens Openness worker under `mcp/worker/tia/v20/`. Pi receives only the 18 explicitly mapped read-only Simon tools. Process discovery, attachment, and disconnect remain host-only. Compile, import, save, project lifecycle mutation, source generation, online PLC operations, arbitrary process execution, and arbitrary filesystem access remain blocked.
+The second phase adds a Simon-owned MCP package and an incorporated, attributed TIA Portal V20/Siemens Openness worker under `mcp/worker/tia/v20/`. M1 initially exposed 18 mapped read-only tools; M2 expanded the direct TIA catalog to 20 and added three application-owned snapshot retrieval tools. Process discovery, attachment, disconnect, snapshot refresh, export, and artifact operations remain host-only. Compile, import, save, project lifecycle mutation, source generation, online PLC operations, arbitrary process execution, and arbitrary filesystem access remain blocked.
 
 Live qualification completed through the Simon MCP façade: process discovery, attachment, state, project listing, project-tree retrieval, disconnect, and denial of a raw `SaveProject` call all succeeded. Workflow composition and approval authority remain in the application layer, not `Simon/mcp`. See `mcp/README.md`, `mcp/TOOL_MAPPING.md`, `mcp/IMPLEMENTATION_PLAN.md`, and `mcp/LIVE_QUALIFICATION.md`.
 
@@ -428,4 +430,20 @@ Live qualification completed through the Simon MCP façade: process discovery, a
 
 The application now owns explicit TIA process discovery, process-start identity validation, conversation-scoped project bindings, connection epochs, reconnect-required restart behavior, bounded inventory, diagnostics, capability/coverage reporting, and per-tool binding guards. The model cannot discover, select, attach, detach, or switch TIA targets. Application-level live qualification confirmed explicit attachment, real project inventory, a tool-backed Pi answer, safe detach with TIA remaining open, and stale/disconnected behavior after restart.
 
-Manual browser qualification remains in `docs/MANUAL_QA.md` and `docs/M1_CHECKLIST.md`. M2 source extraction and retrieval is the next engineering milestone. Electron packaging remains optional release hardening and must not replace the M2 retrieval work required by `docs/Simon_v0_3.md`.
+The M1 engineering gate and localhost browser product acceptance are complete. Evidence is tracked in `docs/MANUAL_QA.md` and `docs/M2_PRODUCT_ACCEPTANCE.md`.
+
+## 16. M2 amendment — read-only source extraction and retrieval
+
+M2 adds direct PLC tag enumeration, controlled host-only source extraction, immutable bounded snapshots, deterministic normalization, persisted freshness and coverage, exact-before-FTS5 retrieval, exact references, stable citations, and three application-owned Pi retrieval tools. Pi cannot create or refresh snapshots, choose paths, read opaque artifacts directly, or operate TIA lifecycle controls.
+
+Application-level live qualification covered exact path/name/tag/address retrieval, lexical retrieval, cited references, a grounded Pi answer, detach invalidation, restart staleness, and project survival. Known partials remain visible for large-program timeouts, selected path-resolution cases, nested hardware coverage, and FBD document export prerequisites.
+
+## 17. M3 amendment — version-aware documentation and approved conventions
+
+M3 adds a separate documentation store, bounded installed-help ZIP/HTML ingestion, deterministic normalization, applicability-first exact-before-FTS5 retrieval, stable citations, source-status UI, and two read-only Pi documentation tools. Matching installed STEP 7 V20 Update 7 help is the initial real source. Official-online ingestion remains blocked because current Siemens terms prohibit the intended automated text/data-mining use; source metadata is retained without body ingestion.
+
+M3 also adds authorized convention inference and separate convention persistence. Drafts remain inactive. Only host-recorded engineer decisions may approve, reject, revise, or retire conventions. Approval creates append-only immutable revisions with provenance, examples, exceptions, decision metadata, and supersession links. Pi receives count and approved-search tools only.
+
+The production loopback application was live-qualified for installed documentation status/search/citations, applicability and unknowns, rights blocking, grounded Pi answers, convention rejection/approval/revision/retirement, and restart persistence. See `docs/M3_LIVE_QUALIFICATION.md` and `docs/M3_CHECKLIST.md`.
+
+M3 remains read-only and does not authorize compilation, save, import, source generation, project mutation, online PLC operations, documentation crawling, arbitrary URL/file ingestion, external-provider upload of Siemens content, or model-controlled approval/lifecycle operations. Electron packaging remains optional release hardening and is still deferred.

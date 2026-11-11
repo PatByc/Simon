@@ -14,7 +14,7 @@ Agent runtimes are useful but their terminal interfaces, runtime-specific events
 
 ## Core value proposition
 
-Simon provides a familiar application chat surface while keeping Pi execution, credentials, sessions, policy, and future engineering integrations behind a controlled backend.
+Simon provides a familiar application chat surface while keeping Pi execution, credentials, sessions, policy, and qualified read-only engineering integrations behind a controlled backend.
 
 ## Current MVP outcome
 
@@ -26,14 +26,18 @@ The user can:
 - select supported models and thinking levels;
 - use slash commands and inspect truthful activity;
 - exercise Manual/Auto review behavior using clearly synthetic actions;
-- understand what data leaves the machine and what capabilities are unavailable.
+- understand what data leaves the machine and what capabilities are unavailable;
+- explicitly attach a conversation to an engineer-selected TIA Portal V20 project in read-only mode;
+- create bounded project snapshots and retrieve cited blocks, types, tags, references, and supported source evidence;
+- see snapshot freshness, partial coverage, ambiguity, and stale-state limitations;
+- search locally indexed, version-aware Siemens installed help with source, applicability, freshness, and rights labels;
+- infer convention drafts only from host-authorized examples and use only engineer-approved immutable revisions as assistant guidance.
 
 ## Non-goals for this slice
 
-- TIA Portal or Siemens integration.
-- Fanqi or another Openness bridge.
-- MCP servers or arbitrary domain tools.
-- PLC project reading, mutation, compilation, or deployment.
-- General shell or filesystem access.
+- PLC project mutation, compilation, import, save, download, deployment, or online operation.
+- Model-controlled TIA attachment, detach, snapshot refresh, source export, artifact lifecycle, documentation ingestion/refresh, or convention approval/lifecycle.
+- Raw or arbitrary MCP exposure beyond Simon-owned classified read contracts.
+- Arbitrary URL/file ingestion, general shell or filesystem access, or external-provider upload of proprietary Siemens help.
 - Multi-user SaaS, billing, organizations, or cloud hosting.
 - Executable self-customization or automatic publication.

@@ -27,6 +27,7 @@ import {
 const SafeMarkdown = lazy(() =>
   import("./SafeMarkdown.js").then((module) => ({ default: module.SafeMarkdown })),
 );
+import { DocumentationEvidencePanel } from "./DocumentationEvidencePanel.js";
 import { EngineeringContextPanel } from "./EngineeringContextPanel.js";
 import claudeLogo from "./assets/providers/claude.svg";
 import openAiLogo from "./assets/providers/openai.svg";
@@ -217,8 +218,19 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
     const closeMenu = (event: MouseEvent) => {
       if (!modelMenuRef.current?.contains(event.target as Node)) setModelMenuOpen(false);
     };
+    const closeMenuFromKeyboard = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setModelMenuOpen(false);
+      window.setTimeout(() => modelMenuRef.current?.querySelector<HTMLElement>(".model-trigger")?.focus(), 0);
+    };
     document.addEventListener("mousedown", closeMenu);
-    return () => document.removeEventListener("mousedown", closeMenu);
+    document.addEventListener("keydown", closeMenuFromKeyboard);
+    return () => {
+      document.removeEventListener("mousedown", closeMenu);
+      document.removeEventListener("keydown", closeMenuFromKeyboard);
+    };
   }, [modelMenuOpen]);
 
   useEffect(() => {
@@ -1028,6 +1040,7 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
                       onBindingChange={(binding) => setConversation((current) => current ? { ...current, projectBinding: binding } : current)}
                     />
                   )}
+                  <DocumentationEvidencePanel />
                 </div>
               ) : <p>Loading runtime settings…</p>}
             </section>

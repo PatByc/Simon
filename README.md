@@ -2,7 +2,7 @@
 
 ## Your TIA Portal. Supercharged.
 
-> Simon is a project-aware engineering copilot that runs alongside TIA Portal, understands existing mixed-language PLC projects, retrieves version-correct Siemens documentation, and proposes and applies reviewed changes through supported engineering interfaces.
+> Simon is a project-aware engineering copilot that runs alongside TIA Portal, understands existing mixed-language PLC projects, retrieves version-aware Siemens documentation, and captures engineer-approved local conventions without granting write authority.
 
 **You engineer. SIMON handles the legwork.**
 
@@ -20,6 +20,9 @@ The current application provides:
 - a synthetic fixture mode for ordinary development;
 - an optional `tia-readonly` mode with explicit process selection, conversation-scoped project binding, bounded inventory, diagnostics, 20 direct TIA reads, and three application-owned snapshot retrieval tools;
 - bounded immutable engineering snapshots with persisted freshness, exact and lexical retrieval, references, citations, and explicit partial coverage;
+- local-only installed V20 help ingestion with deterministic normalization, applicability-first exact/FTS5 retrieval, stable citations, and a rights-blocked online source record;
+- host-controlled convention inference, approval, immutable revision history, retirement, and approved-only Pi retrieval;
+- 27 explicitly classified read tools in `tia-readonly` mode, with ingestion, approval, lifecycle, mutation, shell, and arbitrary filesystem/network operations withheld from Pi;
 - truthful runtime activity, capability and coverage disclosure, and sanitized 5h/7d Codex usage.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the active implementation plan and [`AGENTS.md`](AGENTS.md) for project workflow and conventions.
@@ -36,7 +39,7 @@ docs/                 Handoffs, plan, roadmap, and decisions
 
 ## Development status
 
-The chat foundation, M1 read-only attachment, and M2 source-extraction/retrieval implementation are complete in code. Simon includes explicit TIA process selection, stable binding guards, direct tag enumeration, controlled source artifacts, bounded persisted snapshots, exact/FTS5 retrieval, exact references, citations, and three guarded Pi retrieval tools. The complete application path was live-qualified against the user-opened TIA V20 project with explicit partial-coverage reporting and detach safety. Manual browser qualification remains; see [`docs/MANUAL_QA.md`](docs/MANUAL_QA.md), [`docs/M1_CHECKLIST.md`](docs/M1_CHECKLIST.md), and [`docs/M2_CHECKLIST.md`](docs/M2_CHECKLIST.md).
+The chat foundation, M1 read-only attachment, M2 source extraction/retrieval, localhost product acceptance, and M3 documentation/approved-convention implementation are complete. Simon has been live-qualified against the user-opened TIA V20 project and the installed STEP 7 V20 Update 7 help. Exact and lexical documentation retrieval, applicability disclosure, rights blocking, grounded Pi answers, convention rejection/approval/revision/retirement, and restart persistence are recorded in [`docs/M3_LIVE_QUALIFICATION.md`](docs/M3_LIVE_QUALIFICATION.md). Broader manual release regression remains in [`docs/MANUAL_QA.md`](docs/MANUAL_QA.md); Electron packaging remains deferred.
 
 ## Commands
 

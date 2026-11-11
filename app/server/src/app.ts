@@ -5,17 +5,25 @@ import {
   attachEngineeringRequestSchema,
   createEngineeringSnapshotRequestSchema,
   createConversationRequestSchema,
+  createConventionProposalRequestSchema,
   createRunRequestSchema,
+  conventionProposalDecisionRequestSchema,
+  documentationSearchRequestSchema,
   editRunRequestSchema,
   engineeringSearchRequestSchema,
   knowledgeSearchRequestSchema,
   proposalDecisionSchema,
+  retireConventionRequestSchema,
+  reviseConventionRequestSchema,
   updateConversationRequestSchema,
   updateRuntimeRequestSchema,
   type ApiError,
   type StreamEvent,
 } from "@simon/contracts";
 import type { AssistantRuntime } from "./assistant-runtime.js";
+import { ConventionService } from "./convention-service.js";
+import { DocumentationAmbiguityError, DocumentationRetrievalService } from "./documentation-retrieval.js";
+import { DocumentationStore } from "./documentation-store.js";
 import { EngineeringConnectionManager, type EngineeringConnection } from "./engineering-connection.js";
 import { AmbiguousEngineeringQueryError, EngineeringRetrievalService } from "./engineering-retrieval.js";
 import type { EngineeringSnapshotService } from "./engineering-snapshot.js";
@@ -34,6 +42,8 @@ export interface BuildAppOptions {
   engineering?: EngineeringConnection;
   snapshots?: EngineeringSnapshotService;
   engineeringRetrieval?: EngineeringRetrievalService;
+  documentationRetrieval?: DocumentationRetrievalService;
+  conventions?: ConventionService;
 }
 
 function apiError(code: string, message: string): ApiError {
@@ -54,6 +64,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const engineering = options.engineering ?? new EngineeringConnectionManager(store, getRuntimePolicy({}), null);
   const snapshots = options.snapshots;
   const engineeringRetrieval = options.engineeringRetrieval ?? new EngineeringRetrievalService();
+  const documentationRetrieval = options.documentationRetrieval ?? new DocumentationRetrievalService(new DocumentationStore());
+  const conventions = options.conventions ?? new ConventionService();
   const currentSnapshotCapture = (conversationId: string) => {
     if (!snapshots) throw new Error("Engineering snapshot service is unavailable.");
     const status = engineering.getStatus(conversationId);
@@ -95,6 +107,52 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get("/api/v1/status", async () => assistant.getStatus());
+
+  app.get("/api/v1/conventions", async () => conventions.status());
+
+  app.post("/api/v1/conventions/proposals", async (request, reply) => {
+    const parsed = createConventionProposalRequestSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid authorized convention examples"));
+    try { return reply.code(201).send({ proposals: conventions.propose(parsed.data) }); }
+    catch (error) { return reply.code(409).send(apiError("convention_proposal_failed", error instanceof Error ? error.message : "Convention proposal failed")); }
+  });
+
+  app.get<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/history", async (request) => conventions.history(request.params.conventionId));
+
+  app.post<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/decision", async (request, reply) => {
+    const parsed = conventionProposalDecisionRequestSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid convention decision"));
+    try { return { revision: conventions.decide(request.params.conventionId, parsed.data) }; }
+    catch (error) { return reply.code(409).send(apiError("convention_decision_failed", error instanceof Error ? error.message : "Convention decision failed")); }
+  });
+
+  app.post<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/revisions", async (request, reply) => {
+    const parsed = reviseConventionRequestSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid convention revision"));
+    try { return reply.code(201).send(conventions.revise(request.params.conventionId, parsed.data)); }
+    catch (error) { return reply.code(409).send(apiError("convention_revision_failed", error instanceof Error ? error.message : "Convention revision failed")); }
+  });
+
+  app.post<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/retirement", async (request, reply) => {
+    const parsed = retireConventionRequestSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid convention retirement"));
+    try { return reply.code(201).send(conventions.retire(request.params.conventionId, parsed.data)); }
+    catch (error) { return reply.code(409).send(apiError("convention_retirement_failed", error instanceof Error ? error.message : "Convention retirement failed")); }
+  });
+
+  app.get("/api/v1/documentation/status", async () => documentationRetrieval.status());
+
+  app.post("/api/v1/documentation/search", async (request, reply) => {
+    const parsed = documentationSearchRequestSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid documentation search request"));
+    try {
+      return documentationRetrieval.search(parsed.data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Documentation search failed";
+      const code = error instanceof DocumentationAmbiguityError ? "documentation_query_ambiguous" : "documentation_search_failed";
+      return reply.code(409).send(apiError(code, message));
+    }
+  });
 
   app.get<{ Querystring: { conversationId?: string } }>("/api/v1/engineering/status", async (request) =>
     engineering.getStatus(request.query.conversationId));

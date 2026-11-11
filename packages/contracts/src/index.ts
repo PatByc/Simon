@@ -8,6 +8,14 @@ export const timestampSchema = z.string().datetime({ offset: true });
 export const approvalModeSchema = z.enum(["manual", "auto"]);
 export type ApprovalMode = z.infer<typeof approvalModeSchema>;
 
+export const knowledgeAuthoritySchema = z.enum([
+  "observed-project",
+  "official-documentation",
+  "inferred-convention",
+  "approved-convention",
+]);
+export type KnowledgeAuthority = z.infer<typeof knowledgeAuthoritySchema>;
+
 export const conversationStatusSchema = z.enum([
   "idle",
   "running",
@@ -312,6 +320,282 @@ export const engineeringSnapshotStatusResponseSchema = z.object({
   snapshot: engineeringSnapshotSchema.nullable(),
 }).strict();
 export type EngineeringSnapshotStatusResponse = z.infer<typeof engineeringSnapshotStatusResponseSchema>;
+
+export const documentationSourceKindSchema = z.enum(["installed-help", "official-online"]);
+export type DocumentationSourceKind = z.infer<typeof documentationSourceKindSchema>;
+
+export const documentationRightsStatusSchema = z.enum(["local-only", "allowed", "blocked", "unknown"]);
+export type DocumentationRightsStatus = z.infer<typeof documentationRightsStatusSchema>;
+
+export const documentationSourceStateSchema = z.enum(["ready", "indexing", "partial", "stale", "blocked", "failed"]);
+export type DocumentationSourceState = z.infer<typeof documentationSourceStateSchema>;
+
+export const documentationTargetSchema = z.object({
+  product: z.string().min(1).max(120).nullable(),
+  version: z.string().min(1).max(40).nullable(),
+  update: z.string().min(1).max(40).nullable(),
+  cpuFamily: z.string().min(1).max(120).nullable(),
+  firmware: z.string().min(1).max(40).nullable(),
+  language: z.string().min(1).max(80).nullable(),
+  locale: z.string().min(2).max(20).nullable(),
+}).strict();
+export type DocumentationTarget = z.infer<typeof documentationTargetSchema>;
+
+export const documentationApplicabilityStateSchema = z.enum(["exact", "compatible", "adjacent", "conflicting", "unknown"]);
+export type DocumentationApplicabilityState = z.infer<typeof documentationApplicabilityStateSchema>;
+
+export const documentationApplicabilityEvidenceSchema = z.object({
+  field: z.enum(["product", "version", "update", "cpuFamily", "firmware", "language", "locale"]),
+  targetValue: z.string().min(1).max(120),
+  sourceValue: z.string().min(1).max(120).nullable(),
+  relation: z.enum(["exact", "missing", "different"]),
+}).strict();
+export type DocumentationApplicabilityEvidence = z.infer<typeof documentationApplicabilityEvidenceSchema>;
+
+export const documentationApplicabilitySchema = z.object({
+  state: documentationApplicabilityStateSchema,
+  evidence: z.array(documentationApplicabilityEvidenceSchema).max(20),
+  reasons: z.array(z.string().min(1).max(300)).min(1).max(20),
+  explicitScope: z.string().min(1).max(2_000).nullable(),
+}).strict();
+export type DocumentationApplicability = z.infer<typeof documentationApplicabilitySchema>;
+
+export const documentationSourceSchema = z.object({
+  sourceId: sha256DigestSchema,
+  kind: documentationSourceKindSchema,
+  authority: z.literal("official-documentation"),
+  title: z.string().min(1).max(500),
+  product: z.string().min(1).max(120),
+  version: z.string().min(1).max(40).nullable(),
+  update: z.string().min(1).max(40).nullable(),
+  locale: z.string().min(2).max(20),
+  canonicalUrl: z.string().url().max(2_000).nullable(),
+  rightsStatus: documentationRightsStatusSchema,
+  state: documentationSourceStateSchema,
+  extractionMethod: z.string().min(1).max(120),
+  contentDigest: sha256DigestSchema.nullable(),
+  indexedAt: timestampSchema.nullable(),
+  statusNote: z.string().min(1).max(500),
+  attributes: z.record(z.string(), z.unknown()),
+}).strict();
+export type DocumentationSource = z.infer<typeof documentationSourceSchema>;
+
+export const documentationTopicSchema = z.object({
+  topicId: sha256DigestSchema,
+  sourceId: sha256DigestSchema,
+  stableKey: z.string().min(1).max(1_000),
+  title: z.string().min(1).max(500),
+  aliases: z.array(z.string().min(1).max(500)).max(50),
+  product: z.string().min(1).max(120),
+  version: z.string().min(1).max(40).nullable(),
+  update: z.string().min(1).max(40).nullable(),
+  locale: z.string().min(2).max(20),
+  contentDigest: sha256DigestSchema,
+  contentLength: z.number().int().nonnegative(),
+  excerpt: z.string().max(2_000),
+  explicitScope: z.string().min(1).max(2_000).nullable(),
+  attributes: z.record(z.string(), z.unknown()),
+}).strict();
+export type DocumentationTopic = z.infer<typeof documentationTopicSchema>;
+
+export const documentationCitationSchema = z.object({
+  citationId: sha256DigestSchema,
+  sourceId: sha256DigestSchema,
+  topicId: sha256DigestSchema,
+  sourceKind: documentationSourceKindSchema,
+  sourceTitle: z.string().min(1).max(500),
+  topicTitle: z.string().min(1).max(500),
+  product: z.string().min(1).max(120),
+  version: z.string().min(1).max(40).nullable(),
+  update: z.string().min(1).max(40).nullable(),
+  locale: z.string().min(2).max(20),
+  applicability: documentationApplicabilitySchema,
+  canonicalUrl: z.string().url().max(2_000).nullable(),
+  indexedAt: timestampSchema,
+}).strict();
+export type DocumentationCitation = z.infer<typeof documentationCitationSchema>;
+
+export const documentationMatchKindSchema = z.enum(["exact-key", "exact-title", "exact-alias", "lexical"]);
+export type DocumentationMatchKind = z.infer<typeof documentationMatchKindSchema>;
+
+export const documentationRetrievalHitSchema = z.object({
+  source: documentationSourceSchema,
+  topic: documentationTopicSchema,
+  matchKind: documentationMatchKindSchema,
+  score: z.number().finite().nonnegative(),
+  snippet: z.string().min(1).max(2_000),
+  applicability: documentationApplicabilitySchema,
+  citation: documentationCitationSchema,
+}).strict();
+export type DocumentationRetrievalHit = z.infer<typeof documentationRetrievalHitSchema>;
+
+export const documentationSearchRequestSchema = z.object({
+  query: z.string().trim().min(1).max(500),
+  limit: z.number().int().positive().max(100).default(20),
+  target: documentationTargetSchema,
+  allowAdjacent: z.boolean().default(false),
+}).strict();
+export type DocumentationSearchRequest = z.infer<typeof documentationSearchRequestSchema>;
+
+export const documentationSearchResponseSchema = z.object({
+  query: z.string().min(1).max(500),
+  target: documentationTargetSchema,
+  hits: z.array(documentationRetrievalHitSchema).max(100),
+  partial: z.boolean(),
+  statusNote: z.string().min(1).max(500),
+}).strict();
+export type DocumentationSearchResponse = z.infer<typeof documentationSearchResponseSchema>;
+
+export const documentationStatusResponseSchema = z.object({
+  sources: z.array(documentationSourceSchema).max(100),
+  topicCount: z.number().int().nonnegative(),
+  currentSourceCount: z.number().int().nonnegative(),
+  blockedSourceCount: z.number().int().nonnegative(),
+  partial: z.boolean(),
+  statusNote: z.string().min(1).max(500),
+}).strict();
+export type DocumentationStatusResponse = z.infer<typeof documentationStatusResponseSchema>;
+
+export const authorizedConventionExampleSchema = z.object({
+  authorization: z.literal("host-authorized"),
+  evidenceId: sha256DigestSchema,
+  sourceId: z.string().min(1).max(500),
+  citation: z.string().min(1).max(2_000),
+  excerpt: z.string().min(1).max(2_000),
+  observedAt: timestampSchema,
+  objectKind: z.string().min(1).max(200),
+  name: z.string().min(1).max(500),
+}).strict();
+export type AuthorizedConventionExamplePayload = z.infer<typeof authorizedConventionExampleSchema>;
+
+export const createConventionProposalRequestSchema = z.object({
+  examples: z.array(authorizedConventionExampleSchema).min(1).max(500),
+}).strict();
+export type CreateConventionProposalRequest = z.infer<typeof createConventionProposalRequestSchema>;
+
+export const conventionProposalDecisionRequestSchema = z.object({
+  action: z.enum(["approve", "reject"]),
+  decidedBy: z.string().min(1).max(200),
+  note: z.string().min(1).max(2_000),
+}).strict();
+export type ConventionProposalDecisionRequest = z.infer<typeof conventionProposalDecisionRequestSchema>;
+
+export const conventionConfidenceSchema = z.enum(["low", "medium", "high"]);
+export type ConventionConfidence = z.infer<typeof conventionConfidenceSchema>;
+
+export const conventionEvidenceSchema = z.object({
+  evidenceId: sha256DigestSchema,
+  authority: z.enum(["observed-project", "official-documentation"]),
+  sourceId: z.string().min(1).max(500),
+  citation: z.string().min(1).max(2_000),
+  excerpt: z.string().min(1).max(2_000),
+  observedAt: timestampSchema,
+}).strict();
+export type ConventionEvidence = z.infer<typeof conventionEvidenceSchema>;
+
+export const conventionDraftSchema = z.object({
+  conventionId: sha256DigestSchema,
+  state: z.literal("proposed"),
+  title: z.string().min(1).max(300),
+  rule: z.string().min(1).max(4_000),
+  rationale: z.string().min(1).max(4_000),
+  scope: z.array(z.string().min(1).max(300)).min(1).max(50),
+  evidence: z.array(conventionEvidenceSchema).min(1).max(100),
+  exceptions: z.array(z.string().min(1).max(1_000)).max(50),
+  confidence: conventionConfidenceSchema,
+  createdAt: timestampSchema,
+  createdBy: z.literal("simon-inference"),
+}).strict();
+export type ConventionDraft = z.infer<typeof conventionDraftSchema>;
+
+export const conventionDecisionActionSchema = z.enum(["approve", "reject", "retire", "supersede"]);
+export type ConventionDecisionAction = z.infer<typeof conventionDecisionActionSchema>;
+
+export const conventionDecisionSchema = z.object({
+  decisionId: idSchema,
+  action: conventionDecisionActionSchema,
+  decidedAt: timestampSchema,
+  decidedBy: z.string().min(1).max(200),
+  note: z.string().min(1).max(2_000),
+  hostRecorded: z.literal(true),
+}).strict();
+export type ConventionDecision = z.infer<typeof conventionDecisionSchema>;
+
+export const reviseConventionRequestSchema = z.object({
+  title: z.string().min(1).max(300),
+  rule: z.string().min(1).max(4_000),
+  rationale: z.string().min(1).max(4_000),
+  scope: z.array(z.string().min(1).max(300)).min(1).max(50),
+  evidence: z.array(conventionEvidenceSchema).min(1).max(100),
+  exceptions: z.array(z.string().min(1).max(1_000)).max(50),
+  decidedBy: z.string().min(1).max(200),
+  note: z.string().min(1).max(2_000),
+}).strict();
+export type ReviseConventionRequest = z.infer<typeof reviseConventionRequestSchema>;
+
+export const retireConventionRequestSchema = z.object({
+  decidedBy: z.string().min(1).max(200),
+  note: z.string().min(1).max(2_000),
+}).strict();
+export type RetireConventionRequest = z.infer<typeof retireConventionRequestSchema>;
+
+export const conventionRevisionStateSchema = z.enum(["approved", "retired", "superseded"]);
+export type ConventionRevisionState = z.infer<typeof conventionRevisionStateSchema>;
+
+export const conventionRevisionSchema = z.object({
+  revisionId: sha256DigestSchema,
+  conventionId: sha256DigestSchema,
+  revision: z.number().int().positive(),
+  state: conventionRevisionStateSchema,
+  title: z.string().min(1).max(300),
+  rule: z.string().min(1).max(4_000),
+  rationale: z.string().min(1).max(4_000),
+  scope: z.array(z.string().min(1).max(300)).min(1).max(50),
+  evidence: z.array(conventionEvidenceSchema).min(1).max(100),
+  exceptions: z.array(z.string().min(1).max(1_000)).max(50),
+  approvedAt: timestampSchema,
+  decision: conventionDecisionSchema,
+  supersedesRevisionId: sha256DigestSchema.nullable(),
+}).strict();
+export type ConventionRevision = z.infer<typeof conventionRevisionSchema>;
+
+export const approvedConventionSearchRequestSchema = z.object({
+  query: z.string().trim().min(1).max(500),
+  limit: z.number().int().positive().max(100).default(20),
+}).strict();
+export type ApprovedConventionSearchRequest = z.infer<typeof approvedConventionSearchRequestSchema>;
+
+export const approvedConventionSearchHitSchema = z.object({
+  authority: z.literal("approved-convention"),
+  revision: conventionRevisionSchema,
+  score: z.number().finite().nonnegative(),
+  snippet: z.string().min(1).max(2_000),
+}).strict();
+export type ApprovedConventionSearchHit = z.infer<typeof approvedConventionSearchHitSchema>;
+
+export const approvedConventionSearchResponseSchema = z.object({
+  query: z.string().min(1).max(500),
+  hits: z.array(approvedConventionSearchHitSchema).max(100),
+}).strict();
+export type ApprovedConventionSearchResponse = z.infer<typeof approvedConventionSearchResponseSchema>;
+
+export const conventionCheckResultSchema = z.object({
+  checkKind: z.literal("deterministic-text-check"),
+  revisionId: sha256DigestSchema,
+  subject: z.string().min(1).max(1_000),
+  status: z.enum(["conforms", "deviation", "not-applicable", "unknown"]),
+  explanation: z.string().min(1).max(2_000),
+  functionalVerification: z.literal(false),
+}).strict();
+export type ConventionCheckResult = z.infer<typeof conventionCheckResultSchema>;
+
+export const conventionStatusResponseSchema = z.object({
+  proposed: z.array(conventionDraftSchema).max(1_000),
+  active: z.array(conventionRevisionSchema).max(1_000),
+  retired: z.array(conventionRevisionSchema).max(1_000),
+  rejectedCount: z.number().int().nonnegative(),
+}).strict();
+export type ConventionStatusResponse = z.infer<typeof conventionStatusResponseSchema>;
 
 export const citedEngineeringReferenceSchema = engineeringReferenceSchema.extend({
   citation: engineeringCitationSchema,

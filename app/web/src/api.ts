@@ -6,6 +6,8 @@ import {
   conversationMessagesSchema,
   conversationSchema,
   createRunResponseSchema,
+  documentationSearchResponseSchema,
+  documentationStatusResponseSchema,
   engineeringCapabilitiesSchema,
   engineeringDiagnosticsSchema,
   engineeringInventorySchema,
@@ -26,6 +28,9 @@ import {
   type Conversation,
   type ConversationBranch,
   type ConversationSearchResult,
+  type DocumentationSearchResponse,
+  type DocumentationStatusResponse,
+  type DocumentationTarget,
   type EngineeringCapabilities,
   type EngineeringDiagnostics,
   type EngineeringInventory,
@@ -65,6 +70,20 @@ export async function getUsageStatus(): Promise<UsageStatus> {
 export async function getAssistantStatus(): Promise<AssistantStatus> {
   const response = await fetch("/api/v1/status");
   return assistantStatusSchema.parse(await parseJson(response));
+}
+
+export async function getDocumentationStatus(): Promise<DocumentationStatusResponse> {
+  const response = await fetch("/api/v1/documentation/status");
+  return documentationStatusResponseSchema.parse(await parseJson(response));
+}
+
+export async function searchDocumentation(input: { query: string; target: DocumentationTarget; allowAdjacent?: boolean; limit?: number }): Promise<DocumentationSearchResponse> {
+  const response = await fetch("/api/v1/documentation/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: input.query, target: input.target, allowAdjacent: input.allowAdjacent ?? false, limit: input.limit ?? 20 }),
+  });
+  return documentationSearchResponseSchema.parse(await parseJson(response));
 }
 
 export async function getEngineeringStatus(conversationId?: string): Promise<EngineeringStatus> {

@@ -1,11 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
   CONTRACT_SCHEMA_VERSION,
+  conventionDecisionSchema,
+  conventionDraftSchema,
+  conventionRevisionSchema,
+  conventionStatusResponseSchema,
   conversationSchema,
   createConversationRequestSchema,
+  documentationApplicabilitySchema,
+  documentationSearchRequestSchema,
+  documentationSearchResponseSchema,
+  documentationSourceSchema,
+  documentationStatusResponseSchema,
+  documentationTopicSchema,
   engineeringDocumentSchema,
   engineeringSearchResponseSchema,
   engineeringSnapshotSchema,
+  knowledgeAuthoritySchema,
   proposalSchema,
   streamEventSchema,
   updateConversationRequestSchema,
@@ -37,6 +48,102 @@ const provenance = {
   sourceOperation: "tia.block.export",
   coverage: "complete" as const,
 };
+
+describe("M3 convention lifecycle contracts", () => {
+  const evidence = { evidenceId: digest, authority: "observed-project" as const, sourceId: snapshotId, citation: "PLC_1/Program blocks/FB_Valve", excerpt: "Representative local pattern.", observedAt: occurredAt };
+  const draft = { conventionId: digest, state: "proposed" as const, title: "Valve FB naming", rule: "Prefix valve function blocks with FB_Valve.", rationale: "Observed consistently in authorized examples.", scope: ["PLC software"], evidence: [evidence], exceptions: ["Vendor blocks are excluded."], confidence: "high" as const, createdAt: occurredAt, createdBy: "simon-inference" as const };
+  const decision = { decisionId: conversationId, action: "approve" as const, decidedAt: occurredAt, decidedBy: "engineer", note: "Approved after review.", hostRecorded: true as const };
+  const revision = { revisionId: "b".repeat(64), conventionId: digest, revision: 1, state: "approved" as const, title: draft.title, rule: draft.rule, rationale: draft.rationale, scope: draft.scope, evidence: draft.evidence, exceptions: draft.exceptions, approvedAt: occurredAt, decision, supersedesRevisionId: null };
+
+  it("validates proposed drafts and immutable approved revision payloads", () => {
+    expect(conventionDraftSchema.parse(draft).state).toBe("proposed");
+    expect(conventionDecisionSchema.parse(decision).hostRecorded).toBe(true);
+    expect(conventionRevisionSchema.parse(revision).revision).toBe(1);
+    expect(conventionStatusResponseSchema.parse({ proposed: [draft], active: [revision], retired: [], rejectedCount: 0 }).active).toHaveLength(1);
+  });
+
+  it("rejects self-approval, missing evidence, mutable states, and unrecorded decisions", () => {
+    expect(() => conventionDraftSchema.parse({ ...draft, evidence: [] })).toThrow();
+    expect(() => conventionDecisionSchema.parse({ ...decision, hostRecorded: false })).toThrow();
+    expect(() => conventionRevisionSchema.parse({ ...revision, state: "proposed" })).toThrow();
+    expect(() => conventionRevisionSchema.parse({ ...revision, decision: { ...decision, decidedBy: "" } })).toThrow();
+  });
+});
+
+describe("M3 documentation contracts", () => {
+  const source = {
+    sourceId: digest,
+    kind: "installed-help" as const,
+    authority: "official-documentation" as const,
+    title: "STEP 7 installed help",
+    product: "STEP 7",
+    version: "V20",
+    update: "Update 7",
+    locale: "en-US",
+    canonicalUrl: null,
+    rightsStatus: "local-only" as const,
+    state: "ready" as const,
+    extractionMethod: "installed-zip-html",
+    contentDigest: digest,
+    indexedAt: occurredAt,
+    statusNote: "Local-only source.",
+    attributes: {},
+  };
+  const topic = {
+    topicId: "b".repeat(64),
+    sourceId: digest,
+    stableKey: "ProgSCL/REF",
+    title: "REF: Create a reference to a tag",
+    aliases: ["REF"],
+    product: "STEP 7",
+    version: "V20",
+    update: "Update 7",
+    locale: "en-US",
+    contentDigest: "c".repeat(64),
+    contentLength: 120,
+    excerpt: "Creates a reference.",
+    explicitScope: "$DEVICE='S7-1500'",
+    attributes: {},
+  };
+  const applicability = {
+    state: "exact" as const,
+    evidence: [{ field: "version" as const, targetValue: "V20", sourceValue: "V20", relation: "exact" as const }],
+    reasons: ["Version matches V20."],
+    explicitScope: "$DEVICE='S7-1500'",
+  };
+
+  it("validates strict source, topic, applicability, search, status, and citation payloads", () => {
+    expect(documentationSourceSchema.parse(source).state).toBe("ready");
+    expect(documentationTopicSchema.parse(topic).title).toContain("REF");
+    expect(documentationApplicabilitySchema.parse(applicability).state).toBe("exact");
+    expect(documentationSearchRequestSchema.parse({
+      query: "REF", target: { product: "STEP 7", version: "V20", update: "Update 7", cpuFamily: "S7-1500", firmware: null, language: "SCL", locale: "en-US" },
+    }).allowAdjacent).toBe(false);
+    expect(documentationStatusResponseSchema.parse({ sources: [source], topicCount: 1, currentSourceCount: 1, blockedSourceCount: 0, partial: false, statusNote: "Ready." }).topicCount).toBe(1);
+    expect(documentationSearchResponseSchema.parse({
+      query: "REF",
+      target: { product: "STEP 7", version: "V20", update: "Update 7", cpuFamily: "S7-1500", firmware: null, language: "SCL", locale: "en-US" },
+      hits: [{ source, topic, matchKind: "exact-alias", score: 1, snippet: "Creates a reference.", applicability, citation: { citationId: "d".repeat(64), sourceId: digest, topicId: topic.topicId, sourceKind: "installed-help", sourceTitle: source.title, topicTitle: topic.title, product: "STEP 7", version: "V20", update: "Update 7", locale: "en-US", applicability, canonicalUrl: null, indexedAt: occurredAt } }],
+      partial: false,
+      statusNote: "One applicable result.",
+    }).hits).toHaveLength(1);
+  });
+
+  it("rejects unbounded or unsupported documentation payloads", () => {
+    expect(() => documentationSearchRequestSchema.parse({ query: "REF", limit: 101, target: { product: null, version: null, update: null, cpuFamily: null, firmware: null, language: null, locale: null } })).toThrow();
+    expect(() => documentationSourceSchema.parse({ ...source, canonicalUrl: "file:///private/help", extra: true })).toThrow();
+    expect(documentationApplicabilitySchema.parse({ state: "unknown", evidence: [], reasons: ["No target fields are known."], explicitScope: null }).state).toBe("unknown");
+  });
+});
+
+describe("M3 knowledge safety contracts", () => {
+  it("accepts only explicit evidence authority classes", () => {
+    expect(knowledgeAuthoritySchema.parse("official-documentation")).toBe("official-documentation");
+    expect(knowledgeAuthoritySchema.parse("approved-convention")).toBe("approved-convention");
+    expect(() => knowledgeAuthoritySchema.parse("model-generated")).toThrow();
+    expect(() => knowledgeAuthoritySchema.parse("documentation-command")).toThrow();
+  });
+});
 
 describe("conversationSchema", () => {
   it("accepts a valid conversation", () => {

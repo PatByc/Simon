@@ -2,6 +2,10 @@
 
 Automated browser E2E testing is intentionally deferred. Complete this checklist before desktop packaging or regular use.
 
+## Localhost acceptance checkpoint — 2026-11-11
+
+The focused localhost product gate in `docs/M2_PRODUCT_ACCEPTANCE.md` was completed against the production loopback application. It covered synthetic chat/runtime behavior, explicit M1 attachment, M2 snapshot/retrieval flows, keyboard/accessibility sampling, required responsive widths and display scales, security headers, privacy boundaries, safe detach, and restart behavior. Two observed frontend defects were fixed and browser-reverified: stale search results after an ambiguous query and the model selector not closing on Escape. The full automated workspace gate passed afterward. Electron packaging remains deferred. Unchecked granular items below remain useful as repeatable release-regression checks and are not claims of unobserved behavior.
+
 ## Setup
 
 ```powershell
