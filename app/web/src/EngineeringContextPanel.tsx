@@ -4,6 +4,8 @@ import type {
   EngineeringCapabilities,
   EngineeringDiagnostics,
   EngineeringInventory,
+  EngineeringSearchResponse,
+  EngineeringSnapshot,
   EngineeringStatus,
   ProjectBinding,
   TiaProcess,
@@ -14,8 +16,11 @@ import {
   getEngineeringCapabilities,
   getEngineeringDiagnostics,
   getEngineeringInventory,
+  getEngineeringSnapshot,
   getEngineeringStatus,
   listEngineeringProcesses,
+  refreshEngineeringSnapshot,
+  searchEngineeringSnapshot,
 } from "./api.js";
 
 interface EngineeringContextPanelProps {
@@ -33,19 +38,24 @@ export function EngineeringContextPanel({ conversation, onBindingChange }: Engin
   const [capabilities, setCapabilities] = useState<EngineeringCapabilities | null>(null);
   const [diagnostics, setDiagnostics] = useState<EngineeringDiagnostics | null>(null);
   const [inventory, setInventory] = useState<EngineeringInventory | null>(null);
+  const [snapshot, setSnapshot] = useState<EngineeringSnapshot | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResult, setSearchResult] = useState<EngineeringSearchResponse | null>(null);
   const [selectedProcess, setSelectedProcess] = useState("");
-  const [busy, setBusy] = useState<"discover" | "attach" | "detach" | "inventory" | null>(null);
+  const [busy, setBusy] = useState<"discover" | "attach" | "detach" | "inventory" | "snapshot" | "search" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = async () => {
-    const [nextStatus, nextCapabilities, nextDiagnostics] = await Promise.all([
+    const [nextStatus, nextCapabilities, nextDiagnostics, nextSnapshot] = await Promise.all([
       getEngineeringStatus(conversation.conversationId),
       getEngineeringCapabilities(),
       getEngineeringDiagnostics(),
+      getEngineeringSnapshot(conversation.conversationId),
     ]);
     setStatus(nextStatus);
     setCapabilities(nextCapabilities);
     setDiagnostics(nextDiagnostics);
+    setSnapshot(nextSnapshot);
   };
 
   useEffect(() => {
@@ -54,11 +64,13 @@ export function EngineeringContextPanel({ conversation, onBindingChange }: Engin
       getEngineeringStatus(conversation.conversationId),
       getEngineeringCapabilities(),
       getEngineeringDiagnostics(),
-    ]).then(([nextStatus, nextCapabilities, nextDiagnostics]) => {
+      getEngineeringSnapshot(conversation.conversationId),
+    ]).then(([nextStatus, nextCapabilities, nextDiagnostics, nextSnapshot]) => {
       if (cancelled) return;
       setStatus(nextStatus);
       setCapabilities(nextCapabilities);
       setDiagnostics(nextDiagnostics);
+      setSnapshot(nextSnapshot);
     }).catch((cause: unknown) => {
       if (!cancelled) setError(cause instanceof Error ? cause.message : "Unable to load engineering context");
     });
@@ -100,6 +112,7 @@ export function EngineeringContextPanel({ conversation, onBindingChange }: Engin
       });
       onBindingChange(binding);
       setInventory(null);
+      setSearchResult(null);
       await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to attach to TIA Portal");
@@ -114,6 +127,8 @@ export function EngineeringContextPanel({ conversation, onBindingChange }: Engin
     try {
       await detachEngineeringProcess();
       setInventory(null);
+      setSnapshot(null);
+      setSearchResult(null);
       await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to disconnect Simon from TIA Portal");
@@ -129,6 +144,33 @@ export function EngineeringContextPanel({ conversation, onBindingChange }: Engin
       setInventory(await getEngineeringInventory(conversation.conversationId));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to retrieve project inventory");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const refreshSnapshot = async () => {
+    setBusy("snapshot");
+    setError(null);
+    try {
+      setSnapshot(await refreshEngineeringSnapshot(conversation.conversationId, true));
+      setSearchResult(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to refresh engineering snapshot");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const searchSnapshot = async () => {
+    const query = searchQuery.trim();
+    if (!query) return;
+    setBusy("search");
+    setError(null);
+    try {
+      setSearchResult(await searchEngineeringSnapshot(conversation.conversationId, query));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to search engineering snapshot");
     } finally {
       setBusy(null);
     }
@@ -179,6 +221,81 @@ export function EngineeringContextPanel({ conversation, onBindingChange }: Engin
             </button>
           </div>
           <p className="engineering-assurance">Disconnecting releases Simon's Openness attachment. It does not close TIA Portal or the engineer's project.</p>
+
+          <div className="engineering-snapshot-card">
+            <div className="engineering-snapshot-head">
+              <div>
+                <span>Retrieval snapshot</span>
+                <strong>{snapshot ? `${snapshot.documentCount} documents · ${snapshot.objectCount} objects` : "Not created"}</strong>
+              </div>
+              <span className={`engineering-freshness is-${snapshot?.freshness ?? "missing"}`}>
+                {snapshot ? snapshot.freshness : "missing"}
+              </span>
+            </div>
+            {snapshot ? (
+              <>
+                <div className="engineering-snapshot-meta">
+                  <span>Observed {formatObserved(snapshot.updatedAt)}</span>
+                  <span>{snapshot.byteCount.toLocaleString()} bytes indexed</span>
+                  <span>{snapshot.coverage.filter((item) => item.state !== "complete").length} coverage limits</span>
+                </div>
+                {snapshot.coverage.some((item) => item.state !== "complete") && (
+                  <details className="engineering-snapshot-coverage">
+                    <summary>Coverage notes</summary>
+                    <ul>
+                      {snapshot.coverage.filter((item) => item.state !== "complete").map((item, index) => (
+                        <li key={`${item.capability}-${index}`}><strong>{item.state}</strong> · {item.note}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </>
+            ) : (
+              <p className="engineering-snapshot-empty">Create a bounded local snapshot before asking Simon to search project sources, tags, or references.</p>
+            )}
+            <div className="engineering-actions">
+              <button type="button" onClick={refreshSnapshot} disabled={busy !== null}>
+                {busy === "snapshot" ? "Refreshing snapshot…" : snapshot ? "Refresh snapshot" : "Create snapshot"}
+              </button>
+            </div>
+
+            <form className="engineering-search" onSubmit={(event) => { event.preventDefault(); void searchSnapshot(); }}>
+              <label htmlFor={`engineering-search-${conversation.conversationId}`}>Search current snapshot</label>
+              <div>
+                <input
+                  id={`engineering-search-${conversation.conversationId}`}
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Exact path, tag, address, or phrase"
+                  disabled={!snapshot || snapshot.freshness !== "current" || busy !== null}
+                />
+                <button type="submit" disabled={!snapshot || !searchQuery.trim() || busy !== null}>
+                  {busy === "search" ? "Searching…" : "Search"}
+                </button>
+              </div>
+            </form>
+
+            {searchResult && (
+              <div className="engineering-results" aria-live="polite">
+                <div className="engineering-results-head">
+                  <strong>{searchResult.hits.length} result{searchResult.hits.length === 1 ? "" : "s"}</strong>
+                  <span>{searchResult.partial ? "Partial coverage" : "Current snapshot"}</span>
+                </div>
+                {searchResult.hits.length ? (
+                  <ol>
+                    {searchResult.hits.slice(0, 6).map((hit) => (
+                      <li key={hit.citation.citationId}>
+                        <div><span>{hit.document.kind}</span><strong>{hit.document.name}</strong></div>
+                        <p>{hit.snippet}</p>
+                        <code>{hit.citation.engineeringPath}</code>
+                        <small>{hit.matchKind.replaceAll("-", " ")} · {hit.citation.coverage}</small>
+                      </li>
+                    ))}
+                  </ol>
+                ) : <p className="engineering-snapshot-empty">No exact or lexical match was found in this snapshot.</p>}
+              </div>
+            )}
+          </div>
         </>
       ) : (
         <>

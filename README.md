@@ -18,7 +18,8 @@ The current application provides:
 - Retry, edit/resend, response copying, and code-block copying;
 - model, thinking-level, slash-command, and approval-mode controls;
 - a synthetic fixture mode for ordinary development;
-- an optional `tia-readonly` mode with explicit process selection, conversation-scoped project binding, bounded inventory, diagnostics, and 18 allowlisted read tools;
+- an optional `tia-readonly` mode with explicit process selection, conversation-scoped project binding, bounded inventory, diagnostics, 20 direct TIA reads, and three application-owned snapshot retrieval tools;
+- bounded immutable engineering snapshots with persisted freshness, exact and lexical retrieval, references, citations, and explicit partial coverage;
 - truthful runtime activity, capability and coverage disclosure, and sanitized 5h/7d Codex usage.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the active implementation plan and [`AGENTS.md`](AGENTS.md) for project workflow and conventions.
@@ -35,7 +36,7 @@ docs/                 Handoffs, plan, roadmap, and decisions
 
 ## Development status
 
-The chat foundation and M1 read-only attachment implementation are complete in code. Simon includes explicit TIA process discovery and selection, stable process-start identity checks, conversation-scoped project bindings, reconnect-required restart behavior, bounded project inventory, capability reporting, and guarded Pi tools. Application-level live qualification succeeded against the user-opened TIA V20 project. Manual browser qualification remains; see [`docs/MANUAL_QA.md`](docs/MANUAL_QA.md) and [`docs/M1_CHECKLIST.md`](docs/M1_CHECKLIST.md).
+The chat foundation, M1 read-only attachment, and M2 source-extraction/retrieval implementation are complete in code. Simon includes explicit TIA process selection, stable binding guards, direct tag enumeration, controlled source artifacts, bounded persisted snapshots, exact/FTS5 retrieval, exact references, citations, and three guarded Pi retrieval tools. The complete application path was live-qualified against the user-opened TIA V20 project with explicit partial-coverage reporting and detach safety. Manual browser qualification remains; see [`docs/MANUAL_QA.md`](docs/MANUAL_QA.md), [`docs/M1_CHECKLIST.md`](docs/M1_CHECKLIST.md), and [`docs/M2_CHECKLIST.md`](docs/M2_CHECKLIST.md).
 
 ## Commands
 

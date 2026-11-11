@@ -34,11 +34,34 @@ const liveTestedTools = new Set([
   "simon_tia_get_state",
   "simon_tia_get_open_projects",
   "simon_tia_get_project_tree",
+  "simon_tia_list_devices",
+  "simon_tia_get_device_item",
+  "simon_tia_get_software",
+  "simon_tia_get_software_tree",
+  "simon_tia_list_tag_tables",
+  "simon_tia_list_tags",
+  "simon_tia_analyze_parameter_dbs",
+  "simon_tia_find_tag_usages",
+  "simon_tia_analyze_analog_inputs",
+  "simon_tia_analyze_analog_outputs",
+  "simon_tia_find_plc_types",
+  "simon_engineering_snapshot_status",
+  "simon_engineering_search",
+  "simon_engineering_find_references",
+]);
+
+const partiallyQualifiedTools = new Set([
+  "simon_tia_get_device",
+  "simon_tia_get_block",
+  "simon_tia_find_blocks",
+  "simon_tia_get_block_tree",
+  "simon_tia_analyze_db_members",
+  "simon_tia_get_plc_type",
 ]);
 
 function capabilityLabel(name: string): string {
   return name
-    .replace(/^simon_tia_/, "")
+    .replace(/^simon_(?:tia|engineering)_/, "")
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
@@ -150,6 +173,12 @@ export class EngineeringConnectionManager implements EngineeringConnection {
           .digest("hex"),
         observedAt: new Date().toISOString(),
       };
+      if (conversation.projectBinding) {
+        this.store.markEngineeringSnapshotsStale(
+          { bindingId: conversation.projectBinding.bindingId },
+          "The engineering binding epoch changed; refresh the snapshot.",
+        );
+      }
       this.#activeBinding = binding;
       this.store.updateConversation(conversationId, { projectBinding: binding });
       this.#setState("connected");
@@ -167,6 +196,7 @@ export class EngineeringConnectionManager implements EngineeringConnection {
     return this.#enqueueLifecycle(async () => {
       if (!this.#client) return;
       await this.#client.detach();
+      this.#staleActiveSnapshots("Simon detached from TIA Portal; reconnect and refresh the snapshot.");
       this.#activeBinding = null;
       this.#setState(this.policy.mode === "tia-readonly" ? "disconnected" : "disabled");
     });
@@ -179,12 +209,20 @@ export class EngineeringConnectionManager implements EngineeringConnection {
         ...this.policy.allowedTools.map((tool) => ({
           capability: tool,
           label: capabilityLabel(tool),
-          status: available ? (liveTestedTools.has(tool) ? "live-tested" : "fake-tested") : "disabled",
+          status: available
+            ? liveTestedTools.has(tool)
+              ? "live-tested"
+              : partiallyQualifiedTools.has(tool)
+                ? "partial"
+                : "fake-tested"
+            : "disabled",
           available,
           note: available
             ? liveTestedTools.has(tool)
               ? "Invoked successfully on the target TIA V20 environment."
-              : "Implemented and deterministic-test qualified; operation-specific live qualification remains pending."
+              : partiallyQualifiedTools.has(tool)
+                ? "Invoked on the target TIA V20 environment with documented coverage, timeout, or path-resolution limitations."
+                : "Implemented and deterministic-test qualified; operation-specific live qualification remains pending."
             : "TIA integration is disabled in synthetic mode.",
         })),
         {
@@ -209,7 +247,7 @@ export class EngineeringConnectionManager implements EngineeringConnection {
       tiaMajorVersion: this.policy.mode === "tia-readonly" ? 20 : null,
       workerAvailable: this.#client !== null,
       modelToolCount: this.policy.allowedTools.length,
-      hostToolCount: this.policy.mode === "tia-readonly" ? 3 : 0,
+      hostToolCount: this.policy.mode === "tia-readonly" ? 5 : 0,
       processCount: this.#lastProcesses?.length ?? null,
       activeBinding: this.#activeBinding,
       warnings: [
@@ -247,6 +285,7 @@ export class EngineeringConnectionManager implements EngineeringConnection {
           this.#reason = message;
           this.#state = "stale";
           this.#observedAt = new Date().toISOString();
+          this.#staleActiveSnapshots("The attached TIA project or connection changed; reconnect and refresh the snapshot.");
         }
       },
     );
@@ -255,6 +294,7 @@ export class EngineeringConnectionManager implements EngineeringConnection {
   async close(): Promise<void> {
     return this.#enqueueLifecycle(async () => {
       await this.#client?.close();
+      this.#staleActiveSnapshots("Simon engineering connection closed; reconnect and refresh the snapshot.");
       this.#activeBinding = null;
     });
   }
@@ -284,6 +324,14 @@ export class EngineeringConnectionManager implements EngineeringConnection {
     return this.#client;
   }
 
+  #staleActiveSnapshots(reason: string): void {
+    if (!this.#activeBinding) return;
+    this.store.markEngineeringSnapshotsStale(
+      { bindingId: this.#activeBinding.bindingId, epoch: this.#activeBinding.epoch },
+      reason,
+    );
+  }
+
   #setState(state: EngineeringStatus["state"]): void {
     this.#state = state;
     this.#reason = undefined;
@@ -291,6 +339,7 @@ export class EngineeringConnectionManager implements EngineeringConnection {
   }
 
   #fail(error: unknown): void {
+    this.#staleActiveSnapshots("The engineering connection failed; reconnect and refresh the snapshot.");
     this.#state = "failed";
     this.#reason = error instanceof Error ? error.message : "Engineering connection failed.";
     this.#observedAt = new Date().toISOString();

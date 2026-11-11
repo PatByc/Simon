@@ -68,6 +68,8 @@ export const tiaV20ToolMap: readonly TiaV20ToolMapping[] = [
   read("GetSoftwareInfo", "tia.software.get", "simon_tia_get_software"),
   restricted("CompileSoftware", "tia.software.compile", "compile", "blocked"),
   read("GetSoftwareTree", "tia.software.getTree", "simon_tia_get_software_tree"),
+  read("GetTagTables", "tia.tagTable.list", "simon_tia_list_tag_tables"),
+  read("GetTags", "tia.tag.list", "simon_tia_list_tags", { timeoutMs: 60_000 }),
   read("GetBlockInfo", "tia.block.get", "simon_tia_get_block"),
   read("GetBlocks", "tia.block.search", "simon_tia_find_blocks"),
   read("GetBlocksWithHierarchy", "tia.block.getTree", "simon_tia_get_block_tree"),

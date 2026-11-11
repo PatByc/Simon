@@ -129,6 +129,23 @@ Start with:
 
 See `docs/M1_CHECKLIST.md` for the complete automated and live gate.
 
+## M2 engineering snapshot and retrieval
+
+With the same explicit read-only connection:
+
+- [ ] Create a snapshot and verify state, freshness, object/document counts, and coverage notes are visible.
+- [ ] Search by a known engineering path, unique object name, PLC tag name, logical address, and source phrase.
+- [ ] Every result shows a bounded snippet and engineering-path citation without exposing a local filesystem path.
+- [ ] Duplicate names produce an ambiguity error that requires an engineering path.
+- [ ] Exact reference lookup reports partial coverage honestly where applicable.
+- [ ] Ask Pi to answer from the snapshot; it checks status first, uses retrieval tools, cites paths, and states freshness/coverage limits.
+- [ ] Refresh creates or resumes only the current conversation/binding snapshot and never accepts a caller path.
+- [ ] Disconnect makes the snapshot stale and blocks search/reference retrieval until explicit reconnect and refresh.
+- [ ] Restart makes persisted snapshots stale and requires explicit reconnect/refresh.
+- [ ] TIA Portal and the project remain open and unmodified throughout.
+
+See `docs/M2_CHECKLIST.md` and `mcp/M2_LIVE_QUALIFICATION.md` for the complete automated and sanitized live gate.
+
 ## Approval demonstration
 
 - [ ] Manual is the clean-profile default.
@@ -161,8 +178,7 @@ Confirm responses contain:
 
 ## Intentional exclusions
 
-- PLC/HMI tag enumeration, source extraction, cross-references, and project indexing until M2
-- Engineering mutations or model-controlled TIA lifecycle operations
+- Engineering mutations or model-controlled TIA lifecycle, snapshot refresh, export, or artifact operations
 - Compile, import, save, download, project close, or online operations
 - Unrestricted/raw MCP exposure to the browser or Pi
 - General shell, filesystem, browser, or internet tools

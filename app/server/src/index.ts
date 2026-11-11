@@ -5,6 +5,10 @@ import fastifyStatic from "@fastify/static";
 import { buildApp } from "./app.js";
 import { EngineeringConnectionManager } from "./engineering-connection.js";
 import { EngineeringMcpClient } from "./engineering-mcp-client.js";
+import { EngineeringRetrievalService } from "./engineering-retrieval.js";
+import { EngineeringRetrievalToolProvider } from "./engineering-retrieval-tools.js";
+import { EngineeringSnapshotService } from "./engineering-snapshot.js";
+import { EngineeringMcpSnapshotCollector } from "./engineering-snapshot-collector.js";
 import { FakeAssistant } from "./fake-assistant.js";
 import { PiAssistant } from "./pi-assistant.js";
 import { getRuntimePolicy } from "./runtime-policy.js";
@@ -23,18 +27,37 @@ const engineeringClient = engineeringPolicy.mode === "tia-readonly"
       command: process.execPath,
       args: [resolve(projectRoot, "mcp/dist/src/main.js")],
       cwd: projectRoot,
+      artifactRoot: resolve(dataDirectory, "mcp-artifacts"),
     })
   : null;
 const engineering = new EngineeringConnectionManager(store, engineeringPolicy, engineeringClient);
+const snapshots = new EngineeringSnapshotService(
+  engineering,
+  engineeringClient
+    ? new EngineeringMcpSnapshotCollector(engineeringClient)
+    : { collect: async () => { throw new Error("TIA read-only mode is required for engineering snapshots."); } },
+  undefined,
+  undefined,
+  undefined,
+  store,
+);
+const engineeringRetrievalTools = new EngineeringRetrievalToolProvider(
+  engineering,
+  snapshots,
+  new EngineeringRetrievalService(),
+  store,
+);
 const assistant = runtimeName === "fake"
   ? new FakeAssistant(store)
-  : new PiAssistant(store, projectRoot, resolve(dataDirectory, "pi-sessions"), engineering);
+  : new PiAssistant(store, projectRoot, resolve(dataDirectory, "pi-sessions"), engineering, engineeringRetrievalTools);
 const app = buildApp({
   logger: true,
   store,
   assistant,
   usageService: new UsageService(resolve(process.env.USERPROFILE ?? "", ".pi/agent/auth.json")),
   engineering,
+  snapshots,
+  engineeringRetrieval: new EngineeringRetrievalService(),
 });
 const webRoot = resolve(projectRoot, "app/web/dist");
 

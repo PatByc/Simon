@@ -597,6 +597,105 @@ namespace TiaMcpServer.ModelContextProtocol
 
         #endregion
 
+        #region plc tags
+
+        [McpServerTool(Name = "GetTagTables"), Description("List PLC tag tables through read-only Openness APIs")]
+        public static ResponseTagTables GetTagTables(
+            [Description("softwarePath: defines the path to the PLC software")] string softwarePath,
+            [Description("limit: maximum returned tables, from 1 to 500")] int limit = 200)
+        {
+            if (limit < 1 || limit > 500)
+            {
+                throw new McpException("limit must be between 1 and 500", McpErrorCode.InvalidParams);
+            }
+
+            try
+            {
+                var tables = Portal.GetTagTables(softwarePath)
+                    .Select(table => DtoMapper.ToTagTableInfo(table, Portal.GetTagTablePath))
+                    .OrderBy(table => table.Path, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                return new ResponseTagTables
+                {
+                    Message = "PLC tag tables retrieved",
+                    Items = tables.Take(limit).ToList(),
+                    TotalCount = tables.Count,
+                    Truncated = tables.Count > limit,
+                    Meta = Meta()
+                };
+            }
+            catch (Exception ex) when (ex is not McpException)
+            {
+                throw new McpException($"Unexpected error retrieving PLC tag tables: {ex.Message}", ex, McpErrorCode.InternalError);
+            }
+        }
+
+        [McpServerTool(Name = "GetTags"), Description("List PLC tags directly from PLC tag tables through read-only Openness APIs")]
+        public static ResponsePlcTags GetTags(
+            [Description("softwarePath: defines the path to the PLC software")] string softwarePath,
+            [Description("tablePath: optional exact engineering path of one tag table")] string tablePath = "",
+            [Description("regexName: optional case-insensitive tag-name regular expression")] string regexName = "",
+            [Description("limit: maximum returned tags, from 1 to 1000")] int limit = 500)
+        {
+            if (limit < 1 || limit > 1000)
+            {
+                throw new McpException("limit must be between 1 and 1000", McpErrorCode.InvalidParams);
+            }
+
+            Regex? regex = null;
+            if (!string.IsNullOrWhiteSpace(regexName))
+            {
+                try
+                {
+                    regex = new Regex(regexName, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+                }
+                catch (ArgumentException ex)
+                {
+                    throw new McpException($"Invalid tag-name regular expression: {ex.Message}", McpErrorCode.InvalidParams);
+                }
+            }
+
+            try
+            {
+                var tables = Portal.GetTagTables(softwarePath)
+                    .Select(table => new { Table = table, Path = Portal.GetTagTablePath(table) })
+                    .Where(item => string.IsNullOrWhiteSpace(tablePath) || item.Path.Equals(tablePath, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (!string.IsNullOrWhiteSpace(tablePath) && tables.Count == 0)
+                {
+                    throw new McpException($"PLC tag table not found at '{tablePath}'", McpErrorCode.InvalidParams);
+                }
+
+                var tags = tables
+                    .SelectMany(item => item.Table.Tags
+                        .Where(tag => regex == null || regex.IsMatch(tag.Name))
+                        .Select(tag => DtoMapper.ToPlcTagInfo(tag, item.Path)))
+                    .OrderBy(tag => tag.Path, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                return new ResponsePlcTags
+                {
+                    Message = "PLC tags retrieved",
+                    Items = tags.Take(limit).ToList(),
+                    TotalCount = tags.Count,
+                    Truncated = tags.Count > limit,
+                    Meta = Meta()
+                };
+            }
+            catch (RegexMatchTimeoutException ex)
+            {
+                throw new McpException($"Tag-name regular expression timed out: {ex.Message}", McpErrorCode.InvalidParams);
+            }
+            catch (Exception ex) when (ex is not McpException)
+            {
+                throw new McpException($"Unexpected error retrieving PLC tags: {ex.Message}", ex, McpErrorCode.InternalError);
+            }
+        }
+
+        #endregion
+
         #region blocks
 
         [McpServerTool(Name = "GetBlockInfo"), Description("Get a block info, which is located in the plc software")]

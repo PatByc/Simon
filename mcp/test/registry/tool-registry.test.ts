@@ -10,7 +10,7 @@ describe("tool registry", () => {
     const connector = new FakeEngineeringConnector(Object.fromEntries(tiaV20ToolMap.map((item) => [item.connectorOperation, {}])));
     const registry = createToolRegistry(connector);
     const tools = registry.listForModel("tia-readonly");
-    expect(tools).toHaveLength(18);
+    expect(tools).toHaveLength(20);
     expect(tools.every((tool) => tool.policy.exposure === "model")).toBe(true);
     expect(tools.every((tool) => !tool.policy.invalidatesContext)).toBe(true);
   });
@@ -31,5 +31,21 @@ describe("tool registry", () => {
     const connector = new FakeEngineeringConnector({ "tia.connection.status": { connected: true } });
     const tool = createToolRegistry(connector).require("simon_tia_get_state");
     await expect(tool.handler({}, createRequestContext())).resolves.toEqual({ connected: true });
+  });
+
+  it("bounds direct PLC tag enumeration inputs", () => {
+    const registry = createToolRegistry(new FakeEngineeringConnector());
+    const tables = registry.require("simon_tia_list_tag_tables");
+    const tags = registry.require("simon_tia_list_tags");
+
+    expect(tables.inputSchema.parse({ softwarePath: "PLC_1" })).toEqual({ softwarePath: "PLC_1", limit: 200 });
+    expect(tags.inputSchema.parse({ softwarePath: "PLC_1" })).toEqual({
+      softwarePath: "PLC_1",
+      tablePath: "",
+      regexName: "",
+      limit: 500,
+    });
+    expect(() => tags.inputSchema.parse({ softwarePath: "PLC_1", limit: 1001 })).toThrow();
+    expect(() => tags.inputSchema.parse({ softwarePath: "PLC_1", callerPath: "C:/exports" })).toThrow();
   });
 });

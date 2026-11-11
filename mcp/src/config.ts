@@ -36,11 +36,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SimonMcpConfig
   if (!Number.isSafeInteger(timeout) || timeout < 1_000 || timeout > 300_000) {
     throw new Error("SIMON_TIA_V20_TOOL_TIMEOUT_MS must be between 1000 and 300000.");
   }
+  const configuredArtifactRoot = env.SIMON_TIA_V20_ARTIFACT_ROOT?.trim();
   return {
     connector,
     tiaV20Executable: executable,
     tiaMajorVersion: 20,
     toolTimeoutMs: timeout,
-    artifactRoot: path.resolve(env.SIMON_TIA_V20_ARTIFACT_ROOT ?? "data/mcp-artifacts"),
+    artifactRoot: path.resolve(configuredArtifactRoot || "data/mcp-artifacts"),
   };
 }

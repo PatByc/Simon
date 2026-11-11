@@ -11,6 +11,7 @@ const client = policy.mode === "tia-readonly"
       command: process.execPath,
       args: [resolve(projectRoot, "mcp/dist/src/main.js")],
       cwd: projectRoot,
+      artifactRoot: resolve(process.env.SIMON_DATA_DIR ?? resolve(projectRoot, "data"), "mcp-artifacts"),
     })
   : null;
 const manager = new EngineeringConnectionManager(new InMemoryStore(), policy, client);

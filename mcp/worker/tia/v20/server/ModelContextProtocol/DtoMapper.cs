@@ -2,8 +2,10 @@ using Siemens.Engineering;
 using Siemens.Engineering.HW;
 using Siemens.Engineering.SW;
 using Siemens.Engineering.SW.Blocks;
+using Siemens.Engineering.SW.Tags;
 using Siemens.Engineering.SW.Types;
 using System;
+using System.Linq;
 using TiaMcpServer.Siemens;
 
 namespace TiaMcpServer.ModelContextProtocol
@@ -77,6 +79,41 @@ namespace TiaMcpServer.ModelContextProtocol
             }
 
             return response;
+        }
+
+        public static ResponseTagTableInfo ToTagTableInfo(PlcTagTable table, Func<PlcTagTable, string> pathResolver)
+        {
+            return new ResponseTagTableInfo
+            {
+                Path = SafeRead(() => pathResolver(table)),
+                Name = SafeRead(() => table.Name),
+                IsDefault = SafeRead(() => table.IsDefault),
+                ModifiedDate = SafeRead(() => (DateTime?)table.ModifiedTimeStamp),
+                TagCount = SafeRead(() => table.Tags.Count)
+            };
+        }
+
+        public static ResponsePlcTagInfo ToPlcTagInfo(PlcTag tag, string tablePath)
+        {
+            var comment = SafeRead(() => string.Join(" | ", tag.Comment.Items
+                .Select(item => item.Text)
+                .Where(text => !string.IsNullOrWhiteSpace(text))
+                .Distinct()));
+            if (comment != null && comment.Length > 1000)
+            {
+                comment = comment.Substring(0, 1000);
+            }
+
+            var name = SafeRead(() => tag.Name);
+            return new ResponsePlcTagInfo
+            {
+                Path = name == null ? tablePath : $"{tablePath}/{name}",
+                TablePath = tablePath,
+                Name = name,
+                DataType = SafeRead(() => tag.DataTypeName),
+                LogicalAddress = SafeRead(() => tag.LogicalAddress),
+                Comment = comment
+            };
         }
 
         public static ResponseTypeInfo ToTypeInfo(PlcType type, Func<PlcType, string>? pathResolver = null)

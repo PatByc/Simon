@@ -7,6 +7,11 @@ describe("MCP configuration", () => {
     expect(loadConfig({}).connector).toBe("simulated");
   });
 
+  it("keeps artifacts in the controlled data directory when the environment value is blank", () => {
+    expect(loadConfig({ SIMON_TIA_V20_ARTIFACT_ROOT: "  " }).artifactRoot)
+      .toBe(path.resolve("data/mcp-artifacts"));
+  });
+
   it("resolves the incorporated TIA worker inside Simon", () => {
     const config = loadConfig({ SIMON_ENGINEERING_CONNECTOR: "tia-v20" });
     expect(config.tiaV20Executable).toBe(path.join(

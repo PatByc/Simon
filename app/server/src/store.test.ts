@@ -3,9 +3,63 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
+import type { EngineeringSnapshot } from "@simon/contracts";
+import { normalizeEngineeringRecords } from "./engineering-normalization.js";
+import type { SnapshotCollection } from "./engineering-snapshot.js";
 import { InMemoryStore } from "./store.js";
 
 const temporaryDirectories: string[] = [];
+
+const searchableCollection: SnapshotCollection = {
+  documents: [{
+    kind: "block",
+    name: "RestartControl",
+    engineeringPath: "Program blocks/RestartControl",
+    parentPath: "Program blocks",
+    language: "SCL",
+    content: "The motor restart delay is five seconds.",
+    artifactId: null,
+    attributes: { constantName: "FC_RestartControl" },
+    sourceOperation: "tia.block.export",
+    coverage: "complete",
+  }],
+  tagTables: [{
+    name: "Inputs",
+    engineeringPath: "PLC tags/Inputs",
+    tags: [{ name: "MotorReady", dataType: "Bool", logicalAddress: "%I0.0", comment: "Motor permissive", sourceOperation: "tia.tag.list", coverage: "complete" }],
+    sourceOperation: "tia.tagTable.list",
+    coverage: "complete",
+  }],
+  references: [],
+  coverage: [],
+};
+
+function createSnapshot(conversationId: string): EngineeringSnapshot {
+  return {
+    snapshotId: "11111111-1111-4111-8111-111111111111",
+    conversationId,
+    binding: {
+      bindingId: "22222222-2222-4222-8222-222222222222",
+      epoch: "33333333-3333-4333-8333-333333333333",
+      processId: 42,
+      processStartTime: "2026-01-01T00:00:00.000Z",
+      projectName: "Plant",
+      projectPathHash: "a".repeat(64),
+      observedAt: "2026-01-01T00:00:01.000Z",
+    },
+    state: "completed",
+    freshness: "current",
+    staleReason: null,
+    createdAt: "2026-01-01T00:00:02.000Z",
+    updatedAt: "2026-01-01T00:00:03.000Z",
+    completedAt: "2026-01-01T00:00:03.000Z",
+    objectCount: 4,
+    byteCount: 100,
+    documentCount: 1,
+    limits: { maxObjects: 100, maxBytes: 1_000, maxDurationMs: 10_000, maxResultsPerQuery: 20 },
+    coverage: [{ capability: "snapshot.documents", state: "complete", observedCount: 1, note: "Observed." }],
+  };
+}
 
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
@@ -86,6 +140,113 @@ describe("persistent conversation store", () => {
     const columns = inspection.prepare("PRAGMA table_info(conversations)").all() as unknown as Array<{ name: string }>;
     expect(columns.some((column) => column.name === "project_binding_json")).toBe(true);
     inspection.close();
+  });
+
+  it("persists and restores snapshot metadata without raw local paths", () => {
+    const directory = mkdtempSync(join(tmpdir(), "simon-store-"));
+    temporaryDirectories.push(directory);
+    const databasePath = join(directory, "simon.sqlite");
+
+    const first = new InMemoryStore(databasePath);
+    const conversation = first.createConversation({ title: "Snapshot", approvalMode: "manual" });
+    const snapshot = createSnapshot(conversation.conversationId);
+    first.saveEngineeringSnapshot(snapshot);
+    expect(first.getLatestEngineeringSnapshot(conversation.conversationId)).toEqual(snapshot);
+    first.close();
+
+    const inspection = new DatabaseSync(databasePath);
+    const row = inspection.prepare("SELECT snapshot_json FROM engineering_snapshots WHERE snapshot_id = ?")
+      .get(snapshot.snapshotId) as unknown as { snapshot_json: string };
+    inspection.close();
+    expect(row.snapshot_json).not.toContain('"projectPath":');
+    expect(row.snapshot_json).not.toContain('"exportPath":');
+    expect(row.snapshot_json).not.toContain('"artifactPath":');
+    expect(row.snapshot_json).not.toMatch(/Users[\\/]/i);
+
+    const second = new InMemoryStore(databasePath);
+    expect(second.getEngineeringSnapshot(snapshot.snapshotId)).toMatchObject({
+      state: "stale",
+      freshness: "stale",
+      staleReason: expect.stringMatching(/restarted/),
+      binding: snapshot.binding,
+    });
+    expect(second.getLatestEngineeringSnapshot(conversation.conversationId)?.snapshotId).toBe(snapshot.snapshotId);
+    second.close();
+  });
+
+  it("indexes normalized engineering records with bounded SQLite FTS5 snippets", () => {
+    const directory = mkdtempSync(join(tmpdir(), "simon-store-"));
+    temporaryDirectories.push(directory);
+    const store = new InMemoryStore(join(directory, "simon.sqlite"));
+    const conversation = store.createConversation({ title: "Search snapshot", approvalMode: "manual" });
+    const snapshot = createSnapshot(conversation.conversationId);
+    store.saveEngineeringSnapshot(snapshot);
+    store.indexEngineeringRecords(snapshot, normalizeEngineeringRecords(snapshot, searchableCollection));
+
+    const sourceHits = store.searchEngineeringDocuments(snapshot.snapshotId, "restart delay", 10);
+    expect(sourceHits).toHaveLength(1);
+    expect(sourceHits[0]).toMatchObject({
+      document: { engineeringPath: "Program blocks/RestartControl" },
+      score: expect.any(Number),
+      snippet: expect.stringContaining("‹restart›"),
+    });
+    expect(sourceHits[0]?.snippet.length).toBeLessThanOrEqual(2_000);
+
+    const tagHits = store.searchEngineeringDocuments(snapshot.snapshotId, "permissive", 10);
+    expect(tagHits[0]?.document).toMatchObject({ kind: "tag", name: "MotorReady" });
+    store.close();
+  });
+
+  it("invalidates current snapshots by binding identity", () => {
+    const directory = mkdtempSync(join(tmpdir(), "simon-store-"));
+    temporaryDirectories.push(directory);
+    const store = new InMemoryStore(join(directory, "simon.sqlite"));
+    const conversation = store.createConversation({ title: "Invalidate snapshot", approvalMode: "manual" });
+    const snapshot = createSnapshot(conversation.conversationId);
+    store.saveEngineeringSnapshot(snapshot);
+
+    expect(store.markEngineeringSnapshotsStale(
+      { bindingId: snapshot.binding.bindingId, epoch: snapshot.binding.epoch },
+      "Binding detached.",
+    )).toBe(1);
+    expect(store.getEngineeringSnapshot(snapshot.snapshotId)).toMatchObject({
+      state: "stale",
+      freshness: "stale",
+      staleReason: "Binding detached.",
+    });
+    expect(store.markEngineeringSnapshotsStale({}, "Repeated invalidation.")).toBe(0);
+    store.close();
+  });
+
+  it("adds snapshot persistence to an existing database without losing conversations", () => {
+    const directory = mkdtempSync(join(tmpdir(), "simon-store-"));
+    temporaryDirectories.push(directory);
+    const databasePath = join(directory, "simon.sqlite");
+    const first = new InMemoryStore(databasePath);
+    const conversation = first.createConversation({ title: "Before migration", approvalMode: "manual" });
+    first.close();
+
+    const second = new InMemoryStore(databasePath);
+    expect(second.conversations.get(conversation.conversationId)?.title).toBe("Before migration");
+    const inspection = new DatabaseSync(databasePath);
+    const tables = inspection.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as unknown as Array<{ name: string }>;
+    expect(tables.some((table) => table.name === "engineering_snapshots")).toBe(true);
+    inspection.close();
+    second.close();
+  });
+
+  it("deletes persisted snapshots with conversation metadata", () => {
+    const directory = mkdtempSync(join(tmpdir(), "simon-store-"));
+    temporaryDirectories.push(directory);
+    const store = new InMemoryStore(join(directory, "simon.sqlite"));
+    const conversation = store.createConversation({ title: "Delete snapshot", approvalMode: "manual" });
+    const snapshot = createSnapshot(conversation.conversationId);
+    store.saveEngineeringSnapshot(snapshot);
+
+    store.deleteConversation(conversation.conversationId);
+
+    expect(store.getEngineeringSnapshot(snapshot.snapshotId)).toBeNull();
+    store.close();
   });
 
   it("deletes the persisted Pi transcript with conversation metadata", () => {

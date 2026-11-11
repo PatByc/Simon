@@ -123,6 +123,209 @@ export const engineeringCapabilitiesSchema = z.object({
 });
 export type EngineeringCapabilities = z.infer<typeof engineeringCapabilitiesSchema>;
 
+export const sha256DigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
+
+export const engineeringCoverageStateSchema = z.enum([
+  "complete",
+  "partial",
+  "unsupported",
+  "failed",
+  "not-observed",
+]);
+export type EngineeringCoverageState = z.infer<typeof engineeringCoverageStateSchema>;
+
+export const engineeringObjectKindSchema = z.enum([
+  "project",
+  "device",
+  "device-item",
+  "software",
+  "block",
+  "type",
+  "interface",
+  "tag-table",
+  "tag",
+  "reference",
+  "source",
+]);
+export type EngineeringObjectKind = z.infer<typeof engineeringObjectKindSchema>;
+
+export const engineeringSnapshotStateSchema = z.enum([
+  "queued",
+  "running",
+  "completed",
+  "partial",
+  "interrupted",
+  "failed",
+  "stale",
+]);
+export type EngineeringSnapshotState = z.infer<typeof engineeringSnapshotStateSchema>;
+
+export const engineeringSnapshotFreshnessSchema = z.enum(["current", "stale"]);
+export type EngineeringSnapshotFreshness = z.infer<typeof engineeringSnapshotFreshnessSchema>;
+
+export const engineeringCoverageSchema = z.object({
+  capability: z.string().min(1).max(120),
+  state: engineeringCoverageStateSchema,
+  observedCount: z.number().int().nonnegative(),
+  note: z.string().min(1).max(500),
+}).strict();
+export type EngineeringCoverage = z.infer<typeof engineeringCoverageSchema>;
+
+export const engineeringProvenanceSchema = z.object({
+  snapshotId: idSchema,
+  bindingId: idSchema,
+  bindingEpoch: idSchema,
+  observedAt: timestampSchema,
+  sourceOperation: z.string().min(1).max(120),
+  coverage: engineeringCoverageStateSchema,
+}).strict();
+export type EngineeringProvenance = z.infer<typeof engineeringProvenanceSchema>;
+
+export const engineeringSnapshotLimitsSchema = z.object({
+  maxObjects: z.number().int().positive().max(100_000),
+  maxBytes: z.number().int().positive().max(500_000_000),
+  maxDurationMs: z.number().int().positive().max(3_600_000),
+  maxResultsPerQuery: z.number().int().positive().max(500),
+}).strict();
+export type EngineeringSnapshotLimits = z.infer<typeof engineeringSnapshotLimitsSchema>;
+
+export const engineeringSnapshotSchema = z.object({
+  snapshotId: idSchema,
+  conversationId: idSchema,
+  binding: projectBindingSchema,
+  state: engineeringSnapshotStateSchema,
+  freshness: engineeringSnapshotFreshnessSchema,
+  staleReason: z.string().min(1).max(500).nullable(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+  completedAt: timestampSchema.nullable(),
+  objectCount: z.number().int().nonnegative(),
+  byteCount: z.number().int().nonnegative(),
+  documentCount: z.number().int().nonnegative(),
+  limits: engineeringSnapshotLimitsSchema,
+  coverage: z.array(engineeringCoverageSchema).max(100),
+}).strict();
+export type EngineeringSnapshot = z.infer<typeof engineeringSnapshotSchema>;
+
+export const engineeringDocumentSchema = z.object({
+  documentId: sha256DigestSchema,
+  snapshotId: idSchema,
+  kind: engineeringObjectKindSchema,
+  name: z.string().min(1).max(500),
+  engineeringPath: z.string().min(1).max(4096),
+  parentPath: z.string().min(1).max(4096).nullable(),
+  language: z.string().min(1).max(80).nullable(),
+  contentDigest: sha256DigestSchema,
+  contentLength: z.number().int().nonnegative(),
+  artifactId: idSchema.nullable(),
+  excerpt: z.string().max(2_000),
+  attributes: z.record(z.string(), z.unknown()),
+  provenance: engineeringProvenanceSchema,
+}).strict();
+export type EngineeringDocument = z.infer<typeof engineeringDocumentSchema>;
+
+export const plcTagSchema = z.object({
+  tagId: sha256DigestSchema,
+  snapshotId: idSchema,
+  tablePath: z.string().min(1).max(4096),
+  name: z.string().min(1).max(500),
+  dataType: z.string().min(1).max(500).nullable(),
+  logicalAddress: z.string().min(1).max(500).nullable(),
+  comment: z.string().max(4_000).nullable(),
+  provenance: engineeringProvenanceSchema,
+}).strict();
+export type PlcTag = z.infer<typeof plcTagSchema>;
+
+export const plcTagTableSchema = z.object({
+  tableId: sha256DigestSchema,
+  snapshotId: idSchema,
+  name: z.string().min(1).max(500),
+  engineeringPath: z.string().min(1).max(4096),
+  tagCount: z.number().int().nonnegative(),
+  tags: z.array(plcTagSchema).max(100_000),
+  provenance: engineeringProvenanceSchema,
+}).strict();
+export type PlcTagTable = z.infer<typeof plcTagTableSchema>;
+
+export const engineeringReferenceSchema = z.object({
+  referenceId: sha256DigestSchema,
+  snapshotId: idSchema,
+  symbol: z.string().min(1).max(1_000),
+  sourcePath: z.string().min(1).max(4096),
+  targetPath: z.string().min(1).max(4096).nullable(),
+  context: z.string().max(2_000),
+  provenance: engineeringProvenanceSchema,
+}).strict();
+export type EngineeringReference = z.infer<typeof engineeringReferenceSchema>;
+
+export const engineeringCitationSchema = z.object({
+  citationId: sha256DigestSchema,
+  snapshotId: idSchema,
+  documentId: sha256DigestSchema,
+  engineeringPath: z.string().min(1).max(4096),
+  observedAt: timestampSchema,
+  freshness: engineeringSnapshotFreshnessSchema,
+  coverage: engineeringCoverageStateSchema,
+}).strict();
+export type EngineeringCitation = z.infer<typeof engineeringCitationSchema>;
+
+export const engineeringMatchKindSchema = z.enum([
+  "exact-path",
+  "exact-name",
+  "identifier",
+  "logical-address",
+  "lexical",
+]);
+export type EngineeringMatchKind = z.infer<typeof engineeringMatchKindSchema>;
+
+export const engineeringRetrievalHitSchema = z.object({
+  document: engineeringDocumentSchema,
+  matchKind: engineeringMatchKindSchema,
+  score: z.number().finite().nonnegative(),
+  snippet: z.string().min(1).max(2_000),
+  citation: engineeringCitationSchema,
+}).strict();
+export type EngineeringRetrievalHit = z.infer<typeof engineeringRetrievalHitSchema>;
+
+export const engineeringSearchRequestSchema = z.object({
+  query: z.string().trim().min(1).max(500),
+  limit: z.number().int().positive().max(100).default(20),
+  kinds: z.array(engineeringObjectKindSchema).max(12).optional(),
+}).strict();
+export type EngineeringSearchRequest = z.infer<typeof engineeringSearchRequestSchema>;
+
+export const engineeringSearchResponseSchema = z.object({
+  snapshot: engineeringSnapshotSchema,
+  query: z.string().min(1).max(500),
+  hits: z.array(engineeringRetrievalHitSchema).max(100),
+  partial: z.boolean(),
+  coverage: z.array(engineeringCoverageSchema).max(100),
+}).strict();
+export type EngineeringSearchResponse = z.infer<typeof engineeringSearchResponseSchema>;
+
+export const createEngineeringSnapshotRequestSchema = z.object({
+  forceRefresh: z.boolean().default(false),
+}).strict();
+export type CreateEngineeringSnapshotRequest = z.infer<typeof createEngineeringSnapshotRequestSchema>;
+
+export const engineeringSnapshotStatusResponseSchema = z.object({
+  snapshot: engineeringSnapshotSchema.nullable(),
+}).strict();
+export type EngineeringSnapshotStatusResponse = z.infer<typeof engineeringSnapshotStatusResponseSchema>;
+
+export const citedEngineeringReferenceSchema = engineeringReferenceSchema.extend({
+  citation: engineeringCitationSchema,
+}).strict();
+export type CitedEngineeringReference = z.infer<typeof citedEngineeringReferenceSchema>;
+
+export const engineeringReferenceSearchResponseSchema = z.object({
+  snapshot: engineeringSnapshotSchema,
+  symbol: z.string().min(1).max(1_000),
+  references: z.array(citedEngineeringReferenceSchema).max(100),
+  partial: z.boolean(),
+}).strict();
+export type EngineeringReferenceSearchResponse = z.infer<typeof engineeringReferenceSearchResponseSchema>;
+
 export const conversationSchema = z.object({
   conversationId: idSchema,
   piSessionId: z.string().min(1).nullable(),

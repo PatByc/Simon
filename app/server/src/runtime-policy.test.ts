@@ -27,6 +27,12 @@ describe("restricted Pi runtime policy", () => {
     expect(policy.allowedTools).toEqual(TIA_READONLY_TOOL_NAMES);
     expect(policy.externalAccess).toBe(true);
     expect(policy.mutations).toBe(false);
+    expect(policy.allowedTools).toEqual(expect.arrayContaining([
+      "simon_engineering_snapshot_status",
+      "simon_engineering_search",
+      "simon_engineering_find_references",
+    ]));
+    expect(policy.allowedTools.some((name) => /attach|connect|disconnect|refresh|export|import|compile|save/i.test(name))).toBe(false);
     expect(() => assertRuntimePolicy(policy)).not.toThrow();
   });
 });

@@ -2,7 +2,21 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { projectBindingSchema, type ChatMessage, type Conversation, type ConversationSearchResult, type Proposal, type Run, type StreamEvent } from "@simon/contracts";
+import {
+  engineeringDocumentSchema,
+  engineeringSnapshotSchema,
+  projectBindingSchema,
+  type ChatMessage,
+  type Conversation,
+  type ConversationSearchResult,
+  type EngineeringDocument,
+  type EngineeringSnapshot,
+  type Proposal,
+  type Run,
+  type StreamEvent,
+} from "@simon/contracts";
+import type { NormalizedEngineeringRecords } from "./engineering-normalization.js";
+import { buildEngineeringSearchDocuments, type LexicalDocumentHit } from "./engineering-retrieval.js";
 
 export interface StoredRun {
   run: Run;
@@ -14,6 +28,17 @@ interface SearchRow {
   conversation_id: string;
   excerpt: string;
   matched_role: "title" | "user" | "assistant";
+}
+
+interface EngineeringDocumentSearchRow {
+  document_json: string;
+  excerpt: string;
+  rank: number;
+}
+
+interface EngineeringSnapshotRow {
+  snapshot_id: string;
+  snapshot_json: string;
 }
 
 interface ConversationRow {
@@ -34,6 +59,7 @@ export class InMemoryStore {
   readonly conversations = new Map<string, Conversation>();
   readonly runs = new Map<string, StoredRun>();
   readonly proposals = new Map<string, Proposal>();
+  readonly engineeringSnapshots = new Map<string, EngineeringSnapshot>();
   private readonly sessionPaths = new Map<string, string>();
   private readonly database: DatabaseSync | null;
 
@@ -66,12 +92,49 @@ export class InMemoryStore {
         content,
         tokenize = 'unicode61'
       );
+      CREATE TABLE IF NOT EXISTS engineering_snapshots (
+        snapshot_id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL,
+        binding_id TEXT NOT NULL,
+        binding_epoch TEXT NOT NULL,
+        project_path_hash TEXT NOT NULL,
+        state TEXT NOT NULL,
+        freshness TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        FOREIGN KEY(conversation_id) REFERENCES conversations(conversation_id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS engineering_snapshots_conversation_updated
+        ON engineering_snapshots(conversation_id, updated_at DESC);
+      CREATE TABLE IF NOT EXISTS engineering_documents (
+        document_id TEXT PRIMARY KEY,
+        snapshot_id TEXT NOT NULL,
+        conversation_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        name TEXT NOT NULL,
+        engineering_path TEXT NOT NULL,
+        document_json TEXT NOT NULL,
+        FOREIGN KEY(snapshot_id) REFERENCES engineering_snapshots(snapshot_id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS engineering_documents_snapshot_path
+        ON engineering_documents(snapshot_id, engineering_path);
+      CREATE VIRTUAL TABLE IF NOT EXISTS engineering_document_search USING fts5(
+        document_id UNINDEXED,
+        snapshot_id UNINDEXED,
+        name,
+        engineering_path,
+        content,
+        tokenize = 'unicode61'
+      );
     `);
     const conversationColumns = this.database.prepare("PRAGMA table_info(conversations)").all() as unknown as Array<{ name: string }>;
     if (!conversationColumns.some((column) => column.name === "project_binding_json")) {
       this.database.exec("ALTER TABLE conversations ADD COLUMN project_binding_json TEXT");
     }
     this.loadConversations();
+    this.loadEngineeringSnapshots();
+    this.markEngineeringSnapshotsStale({}, "Simon restarted; reconnect the engineering binding and refresh the snapshot.");
   }
 
   createConversation(input: { title: string | undefined; approvalMode: "manual" | "auto" }): Conversation {
@@ -108,6 +171,17 @@ export class InMemoryStore {
     if (sessionPath) rmSync(sessionPath, { force: true });
     this.database?.prepare("DELETE FROM conversations WHERE conversation_id = ?").run(conversationId);
     this.database?.prepare("DELETE FROM conversation_search WHERE conversation_id = ?").run(conversationId);
+    const snapshotIds = [...this.engineeringSnapshots.values()]
+      .filter((snapshot) => snapshot.conversationId === conversationId)
+      .map((snapshot) => snapshot.snapshotId);
+    for (const snapshotId of snapshotIds) {
+      this.database?.prepare("DELETE FROM engineering_document_search WHERE snapshot_id = ?").run(snapshotId);
+      this.database?.prepare("DELETE FROM engineering_documents WHERE snapshot_id = ?").run(snapshotId);
+    }
+    this.database?.prepare("DELETE FROM engineering_snapshots WHERE conversation_id = ?").run(conversationId);
+    for (const [snapshotId, snapshot] of this.engineeringSnapshots) {
+      if (snapshot.conversationId === conversationId) this.engineeringSnapshots.delete(snapshotId);
+    }
     return deleted;
   }
 
@@ -154,6 +228,133 @@ export class InMemoryStore {
       conversation.status,
       conversation.projectBinding ? JSON.stringify(conversation.projectBinding) : null,
     );
+  }
+
+  saveEngineeringSnapshot(snapshotValue: EngineeringSnapshot): EngineeringSnapshot {
+    const snapshot = engineeringSnapshotSchema.parse(snapshotValue);
+    this.engineeringSnapshots.set(snapshot.snapshotId, snapshot);
+    this.database?.prepare(`
+      INSERT INTO engineering_snapshots (
+        snapshot_id, conversation_id, binding_id, binding_epoch, project_path_hash,
+        state, freshness, created_at, updated_at, snapshot_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(snapshot_id) DO UPDATE SET
+        state = excluded.state,
+        freshness = excluded.freshness,
+        updated_at = excluded.updated_at,
+        snapshot_json = excluded.snapshot_json
+    `).run(
+      snapshot.snapshotId,
+      snapshot.conversationId,
+      snapshot.binding.bindingId,
+      snapshot.binding.epoch,
+      snapshot.binding.projectPathHash,
+      snapshot.state,
+      snapshot.freshness,
+      snapshot.createdAt,
+      snapshot.updatedAt,
+      JSON.stringify(snapshot),
+    );
+    return snapshot;
+  }
+
+  getEngineeringSnapshot(snapshotId: string): EngineeringSnapshot | null {
+    return this.engineeringSnapshots.get(snapshotId) ?? null;
+  }
+
+  getLatestEngineeringSnapshot(conversationId: string): EngineeringSnapshot | null {
+    return [...this.engineeringSnapshots.values()]
+      .filter((snapshot) => snapshot.conversationId === conversationId)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null;
+  }
+
+  indexEngineeringRecords(snapshot: EngineeringSnapshot, records: NormalizedEngineeringRecords): void {
+    if (!this.database) return;
+    const documents = buildEngineeringSearchDocuments(snapshot, records);
+    this.database.exec("BEGIN");
+    try {
+      this.database.prepare("DELETE FROM engineering_document_search WHERE snapshot_id = ?").run(snapshot.snapshotId);
+      this.database.prepare("DELETE FROM engineering_documents WHERE snapshot_id = ?").run(snapshot.snapshotId);
+      const insertDocument = this.database.prepare(`
+        INSERT INTO engineering_documents (
+          document_id, snapshot_id, conversation_id, kind, name, engineering_path, document_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const insertSearch = this.database.prepare(`
+        INSERT INTO engineering_document_search (
+          document_id, snapshot_id, name, engineering_path, content
+        ) VALUES (?, ?, ?, ?, ?)
+      `);
+      for (const document of documents) {
+        const json = JSON.stringify(document);
+        insertDocument.run(
+          document.documentId,
+          snapshot.snapshotId,
+          snapshot.conversationId,
+          document.kind,
+          document.name,
+          document.engineeringPath,
+          json,
+        );
+        insertSearch.run(
+          document.documentId,
+          snapshot.snapshotId,
+          document.name,
+          document.engineeringPath,
+          `${document.excerpt}\n${JSON.stringify(document.attributes)}`,
+        );
+      }
+      this.database.exec("COMMIT");
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  searchEngineeringDocuments(snapshotId: string, query: string, limit: number): readonly LexicalDocumentHit[] {
+    if (!this.database) return [];
+    const tokens = query.toLowerCase().match(/[\p{L}\p{N}_%.-]+/gu) ?? [];
+    if (tokens.length === 0) return [];
+    const match = tokens.map((token) => `"${token.replaceAll('"', '""')}"*`).join(" AND ");
+    const rows = this.database.prepare(`
+      SELECT d.document_json,
+        snippet(engineering_document_search, 4, '‹', '›', ' … ', 24) AS excerpt,
+        bm25(engineering_document_search, 0.0, 0.0, 5.0, 3.0, 1.0) AS rank
+      FROM engineering_document_search
+      JOIN engineering_documents d ON d.document_id = engineering_document_search.document_id
+      WHERE engineering_document_search MATCH ? AND engineering_document_search.snapshot_id = ?
+      ORDER BY rank, d.engineering_path
+      LIMIT ?
+    `).all(match, snapshotId, Math.max(1, Math.min(limit, 500))) as unknown as EngineeringDocumentSearchRow[];
+    return rows.map((row) => ({
+      document: engineeringDocumentSchema.parse(JSON.parse(row.document_json)) as EngineeringDocument,
+      score: 1 / (1 + Math.abs(row.rank)),
+      snippet: row.excerpt.trim() || "Matching engineering record.",
+    }));
+  }
+
+  markEngineeringSnapshotsStale(
+    filter: { readonly bindingId?: string; readonly epoch?: string },
+    reason: string,
+  ): number {
+    const staleReason = reason.trim();
+    if (!staleReason) throw new Error("Snapshot stale reason is required.");
+    const updatedAt = new Date().toISOString();
+    let count = 0;
+    for (const snapshot of [...this.engineeringSnapshots.values()]) {
+      if (snapshot.freshness === "stale") continue;
+      if (filter.bindingId && snapshot.binding.bindingId !== filter.bindingId) continue;
+      if (filter.epoch && snapshot.binding.epoch !== filter.epoch) continue;
+      this.saveEngineeringSnapshot(engineeringSnapshotSchema.parse({
+        ...snapshot,
+        state: "stale",
+        freshness: "stale",
+        staleReason,
+        updatedAt,
+      }));
+      count += 1;
+    }
+    return count;
   }
 
   indexConversation(conversationId: string, messages: ChatMessage[]): void {
@@ -233,6 +434,15 @@ export class InMemoryStore {
 
   close(): void {
     this.database?.close();
+  }
+
+  private loadEngineeringSnapshots(): void {
+    const rows = this.database?.prepare("SELECT snapshot_id, snapshot_json FROM engineering_snapshots ORDER BY updated_at DESC").all() as unknown as EngineeringSnapshotRow[];
+    for (const row of rows ?? []) {
+      const snapshot = engineeringSnapshotSchema.parse(JSON.parse(row.snapshot_json));
+      if (snapshot.snapshotId !== row.snapshot_id) throw new Error("Persisted engineering snapshot identity mismatch.");
+      this.engineeringSnapshots.set(snapshot.snapshotId, snapshot);
+    }
   }
 
   private loadConversations(): void {

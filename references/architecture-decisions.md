@@ -59,3 +59,10 @@
 **Reason:** Prevent silent process selection, PID reuse, cross-conversation target leakage, and stale reads after project changes or application restarts.
 **Trade-offs:** TIA mode requires an explicit UI connection step, restarts require reconnection, and switching projects requires a new conversation or separate reconciliation flow.
 **Date:** 2026-11-09
+
+## ADR-008: Use binding-scoped read-only project snapshots
+
+**Decision:** Let only the Simon backend create bounded immutable snapshots from worker-controlled read exports; persist metadata in SQLite, larger normalized payloads in opaque ignored artifacts, and expose exact/FTS5 retrieval through Simon contracts.
+**Reason:** Source retrieval must be fast, citable, freshness-aware, and unable to leak export paths or let Pi orchestrate filesystem-producing worker calls.
+**Trade-offs:** Snapshot refresh is explicit and potentially partial; detach, restart, or binding changes stale prior snapshots for live claims. Embeddings are deferred.
+**Date:** 2026-11-11

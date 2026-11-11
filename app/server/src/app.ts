@@ -1,11 +1,13 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
 import {
   apiErrorSchema,
   attachEngineeringRequestSchema,
+  createEngineeringSnapshotRequestSchema,
   createConversationRequestSchema,
   createRunRequestSchema,
   editRunRequestSchema,
+  engineeringSearchRequestSchema,
   knowledgeSearchRequestSchema,
   proposalDecisionSchema,
   updateConversationRequestSchema,
@@ -15,6 +17,8 @@ import {
 } from "@simon/contracts";
 import type { AssistantRuntime } from "./assistant-runtime.js";
 import { EngineeringConnectionManager, type EngineeringConnection } from "./engineering-connection.js";
+import { AmbiguousEngineeringQueryError, EngineeringRetrievalService } from "./engineering-retrieval.js";
+import type { EngineeringSnapshotService } from "./engineering-snapshot.js";
 import { FakeAssistant } from "./fake-assistant.js";
 import { KnowledgeService } from "./knowledge-service.js";
 import { ProposalConflictError, ProposalService } from "./proposal-service.js";
@@ -28,6 +32,8 @@ export interface BuildAppOptions {
   logger?: boolean;
   usageService?: UsageService;
   engineering?: EngineeringConnection;
+  snapshots?: EngineeringSnapshotService;
+  engineeringRetrieval?: EngineeringRetrievalService;
 }
 
 function apiError(code: string, message: string): ApiError {
@@ -46,6 +52,27 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const knowledge = new KnowledgeService();
   const usage = options.usageService ?? new UsageService();
   const engineering = options.engineering ?? new EngineeringConnectionManager(store, getRuntimePolicy({}), null);
+  const snapshots = options.snapshots;
+  const engineeringRetrieval = options.engineeringRetrieval ?? new EngineeringRetrievalService();
+  const currentSnapshotCapture = (conversationId: string) => {
+    if (!snapshots) throw new Error("Engineering snapshot service is unavailable.");
+    const status = engineering.getStatus(conversationId);
+    if (status.state !== "connected" || !status.binding || !status.conversationBindingMatches) {
+      throw new Error("A current conversation-scoped engineering binding is required.");
+    }
+    const capture = snapshots.getLatest(conversationId);
+    const persisted = store.getLatestEngineeringSnapshot(conversationId);
+    if (!capture?.records || !persisted || capture.snapshot.snapshotId !== persisted.snapshotId) {
+      throw new Error("Create a current engineering snapshot before retrieval.");
+    }
+    if (persisted.freshness !== "current" || !["completed", "partial"].includes(persisted.state)) {
+      throw new Error("The engineering snapshot is stale or incomplete; refresh it before retrieval.");
+    }
+    if (persisted.binding.bindingId !== status.binding.bindingId || persisted.binding.epoch !== status.binding.epoch) {
+      throw new Error("The engineering snapshot does not match the current conversation binding.");
+    }
+    return { snapshot: persisted, records: capture.records };
+  };
 
   app.decorate("simonStore", store);
 
@@ -118,6 +145,99 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       } catch (error) {
         const message = error instanceof Error ? error.message : "Engineering inventory failed";
         return reply.code(409).send(apiError("engineering_inventory_failed", message));
+      }
+    },
+  );
+
+  app.get<{ Params: { conversationId: string } }>(
+    "/api/v1/conversations/:conversationId/engineering-snapshot",
+    async (request, reply) => {
+      if (!store.conversations.has(request.params.conversationId)) {
+        return reply.code(404).send(apiError("conversation_not_found", "Conversation not found"));
+      }
+      const snapshot = store.getLatestEngineeringSnapshot(request.params.conversationId);
+      return { snapshot };
+    },
+  );
+
+  app.post<{ Params: { conversationId: string } }>(
+    "/api/v1/conversations/:conversationId/engineering-snapshot",
+    async (request, reply) => {
+      if (!snapshots) return reply.code(503).send(apiError("snapshot_unavailable", "Engineering snapshot service is unavailable"));
+      if (!store.conversations.has(request.params.conversationId)) {
+        return reply.code(404).send(apiError("conversation_not_found", "Conversation not found"));
+      }
+      const parsed = createEngineeringSnapshotRequestSchema.safeParse(request.body ?? {});
+      if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid snapshot refresh request"));
+      const controller = new AbortController();
+      request.raw.once("aborted", () => controller.abort());
+      try {
+        const capture = await snapshots.create(
+          request.params.conversationId,
+          parsed.data.forceRefresh,
+          controller.signal,
+        );
+        return reply.code(201).send(capture.snapshot);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Engineering snapshot refresh failed";
+        return reply.code(409).send(apiError("engineering_snapshot_failed", message));
+      }
+    },
+  );
+
+  app.post<{ Params: { conversationId: string } }>(
+    "/api/v1/conversations/:conversationId/engineering-search",
+    async (request, reply) => {
+      const parsed = engineeringSearchRequestSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid engineering search request"));
+      try {
+        const capture = currentSnapshotCapture(request.params.conversationId);
+        return engineeringRetrieval.search(capture.snapshot, capture.records, parsed.data, store);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Engineering search failed";
+        const code = error instanceof AmbiguousEngineeringQueryError ? "engineering_query_ambiguous" : "engineering_search_failed";
+        return reply.code(409).send(apiError(code, message));
+      }
+    },
+  );
+
+  app.get<{ Params: { conversationId: string }; Querystring: { symbol?: string; limit?: string } }>(
+    "/api/v1/conversations/:conversationId/engineering-references",
+    async (request, reply) => {
+      const symbol = request.query.symbol?.trim() ?? "";
+      const parsedLimit = Number.parseInt(request.query.limit ?? "20", 10);
+      if (!symbol || symbol.length > 1_000 || !Number.isSafeInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
+        return reply.code(400).send(apiError("invalid_request", "A valid symbol and limit are required"));
+      }
+      try {
+        const capture = currentSnapshotCapture(request.params.conversationId);
+        const limit = Math.min(parsedLimit, capture.snapshot.limits.maxResultsPerQuery);
+        const references = capture.records.references
+          .filter((reference) => reference.symbol.localeCompare(symbol, undefined, { sensitivity: "accent" }) === 0)
+          .slice(0, limit)
+          .map((reference) => ({
+            ...reference,
+            citation: {
+              citationId: createHash("sha256")
+                .update([capture.snapshot.snapshotId, reference.referenceId, reference.sourcePath].join("\0"))
+                .digest("hex"),
+              snapshotId: capture.snapshot.snapshotId,
+              documentId: reference.referenceId,
+              engineeringPath: reference.sourcePath,
+              observedAt: reference.provenance.observedAt,
+              freshness: capture.snapshot.freshness,
+              coverage: reference.provenance.coverage,
+            },
+          }));
+        return {
+          snapshot: capture.snapshot,
+          symbol,
+          references,
+          partial: capture.snapshot.state === "partial" || capture.snapshot.coverage.some((item) => item.state !== "complete"),
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Engineering reference lookup failed";
+        return reply.code(409).send(apiError("engineering_references_failed", message));
       }
     },
   );

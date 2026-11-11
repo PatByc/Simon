@@ -13,9 +13,11 @@ describe("Simon MCP server", () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
     const tools = await client.listTools();
-    expect(tools.tools).toHaveLength(21);
+    expect(tools.tools).toHaveLength(23);
     expect(tools.tools.some((tool) => tool.name === "simon_tia_get_state")).toBe(true);
     expect(tools.tools.some((tool) => tool.name === "simon_tia_connect")).toBe(true);
+    expect(tools.tools.some((tool) => tool.name === "simon_tia_list_tag_tables")).toBe(true);
+    expect(tools.tools.some((tool) => tool.name === "simon_tia_list_tags")).toBe(true);
     const result = await client.callTool({ name: "simon_tia_get_state", arguments: {} });
     expect(result.structuredContent).toEqual({ connected: true });
     await client.close();

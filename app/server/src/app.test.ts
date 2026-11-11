@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
 import type { EngineeringConnection } from "./engineering-connection.js";
+import { EngineeringRetrievalService } from "./engineering-retrieval.js";
+import { EngineeringSnapshotService, type SnapshotCollection } from "./engineering-snapshot.js";
 import { FakeAssistant } from "./fake-assistant.js";
 import { InMemoryStore } from "./store.js";
 
@@ -111,6 +113,81 @@ describe("Simon API", () => {
     expect(attached.statusCode).toBe(201);
     expect(attached.json()).toEqual(binding);
     expect((await app.inject({ method: "DELETE", url: "/api/v1/engineering/connection" })).statusCode).toBe(204);
+  });
+
+  it("creates, reports, searches, and resolves references through host-controlled snapshot endpoints", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "simon-snapshot-api-"));
+    temporaryDirectories.push(directory);
+    const store = new InMemoryStore(join(directory, "simon.sqlite"));
+    const binding = {
+      bindingId: "11111111-1111-4111-8111-111111111111",
+      epoch: "22222222-2222-4222-8222-222222222222",
+      processId: 42,
+      processStartTime: "2026-01-01T00:00:00.000Z",
+      projectName: "Plant",
+      projectPathHash: "a".repeat(64),
+      observedAt: "2026-01-01T00:00:01.000Z",
+    };
+    const engineering: EngineeringConnection = {
+      getStatus: () => ({ mode: "tia-readonly", state: "connected", binding, conversationBindingMatches: true, observedAt: "2026-01-01T00:00:02.000Z" }),
+      listProcesses: vi.fn(async () => ({ processes: [], observedAt: "2026-01-01T00:00:02.000Z" })),
+      attach: vi.fn(async () => binding),
+      detach: vi.fn(async () => undefined),
+      getCapabilities: () => ({ capabilities: [], observedAt: "2026-01-01T00:00:02.000Z" }),
+      getDiagnostics: () => ({ mode: "tia-readonly", piIntegration: "sdk", piPackageVersion: "1", mcpPackageVersion: "1", connector: "test", tiaMajorVersion: 20, workerAvailable: true, modelToolCount: 0, hostToolCount: 0, processCount: 0, activeBinding: binding, warnings: [], observedAt: "2026-01-01T00:00:02.000Z" }),
+      getInventory: vi.fn(async () => ({ binding, observedAt: "2026-01-01T00:00:02.000Z", projectTree: "Plant", partial: false, coverage: ["Complete"] })),
+      createPiTools: vi.fn(async () => []),
+      close: vi.fn(async () => undefined),
+    };
+    const collection: SnapshotCollection = {
+      documents: [{ kind: "block", name: "Main", engineeringPath: "Program blocks/Main", parentPath: "Program blocks", language: "SCL", content: "FUNCTION Main restart delay", artifactId: null, attributes: { constantName: "FC_Main" }, sourceOperation: "tia.block.export", coverage: "complete" }],
+      tagTables: [],
+      references: [{ symbol: "Ready", sourcePath: "Program blocks/Main", targetPath: "PLC tags/Inputs/Ready", context: "read", sourceOperation: "tia.analysis.tagUsages", coverage: "complete" }],
+      coverage: [{ capability: "snapshot.documents", state: "complete", observedCount: 1, note: "Observed." }],
+    };
+    const snapshots = new EngineeringSnapshotService(engineering, { collect: async () => collection }, undefined, undefined, undefined, store);
+    const app = buildApp({
+      store,
+      assistant: new FakeAssistant(store, 0),
+      engineering,
+      snapshots,
+      engineeringRetrieval: new EngineeringRetrievalService(),
+    });
+    apps.push(app);
+    const created = await app.inject({ method: "POST", url: "/api/v1/conversations", payload: {} });
+    const conversationId = created.json().conversationId as string;
+
+    const refresh = await app.inject({
+      method: "POST",
+      url: `/api/v1/conversations/${conversationId}/engineering-snapshot`,
+      payload: { forceRefresh: false },
+    });
+    expect(refresh.statusCode).toBe(201);
+    expect(refresh.json()).toMatchObject({ state: "completed", freshness: "current" });
+
+    const status = await app.inject({ method: "GET", url: `/api/v1/conversations/${conversationId}/engineering-snapshot` });
+    expect(status.json()).toMatchObject({ snapshot: { state: "completed" } });
+
+    const exact = await app.inject({
+      method: "POST",
+      url: `/api/v1/conversations/${conversationId}/engineering-search`,
+      payload: { query: "FC_Main" },
+    });
+    expect(exact.statusCode).toBe(200);
+    expect(exact.json()).toMatchObject({ hits: [{ matchKind: "identifier", citation: { engineeringPath: "Program blocks/Main" } }] });
+
+    const lexical = await app.inject({
+      method: "POST",
+      url: `/api/v1/conversations/${conversationId}/engineering-search`,
+      payload: { query: "restart delay" },
+    });
+    expect(lexical.json()).toMatchObject({ hits: [{ matchKind: "lexical" }] });
+
+    const references = await app.inject({
+      method: "GET",
+      url: `/api/v1/conversations/${conversationId}/engineering-references?symbol=Ready`,
+    });
+    expect(references.json()).toMatchObject({ references: [{ citation: { engineeringPath: "Program blocks/Main" } }] });
   });
 
   it("creates a conversation with manual approval by default", async () => {

@@ -133,8 +133,8 @@ A live read-only qualification against TIA Portal V20 verified:
 - host-only process discovery, attachment, and disconnect;
 - state and open-project reads;
 - project-tree retrieval from the engineer-opened local project;
-- 18 model-visible read tools and three host-only lifecycle tools;
+- 20 model-visible direct TIA read tools and five host-only lifecycle/artifact tools;
 - absence of raw compile, import, save, and mutation tools from the Simon MCP catalog;
 - rejection of a direct unclassified `SaveProject` call.
 
-Only the six operations marked `live-tested` in `TOOL_MAPPING.md` were invoked during this qualification. Other model tools are fake-tested and catalog-qualified but still require operation-specific live evidence before stronger claims are made. See `LIVE_QUALIFICATION.md` for the recorded evidence.
+All mapped operations are marked `live-tested` in `TOOL_MAPPING.md` because each was invoked against the target TIA V20 environment. A live-tested operation may still have partial coverage, timeout, path-resolution, format, or Siemens prerequisite limitations; those are recorded independently in `M2_LIVE_QUALIFICATION.md`. Application-owned snapshot status, search, and reference tools are implemented in the Simon server rather than this raw MCP catalog.

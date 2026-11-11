@@ -1,6 +1,12 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { tiaV20ModelMappings } from "@simon/mcp";
+import {
+  ARTIFACT_READ_TOOL_NAME,
+  SOURCE_EXTRACTION_TOOL_NAME,
+  tiaV20ModelMappings,
+  type SourceExtractionRequest,
+  type SourceExtractionResult,
+} from "@simon/mcp";
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { TiaProcess } from "@simon/contracts";
 import type { TObject } from "typebox";
@@ -9,6 +15,7 @@ export interface EngineeringMcpConfig {
   readonly command: string;
   readonly args: readonly string[];
   readonly cwd: string;
+  readonly artifactRoot: string;
 }
 
 export interface OpenEngineeringProject {
@@ -27,6 +34,9 @@ export interface EngineeringMcpGateway {
   getState(): Promise<EngineeringMcpState>;
   getOpenProjects(): Promise<OpenEngineeringProject[]>;
   getProjectTree(): Promise<string>;
+  callSnapshotTool(name: string, arguments_: Readonly<Record<string, unknown>>, timeoutMs?: number): Promise<Record<string, unknown>>;
+  extractSource(request: SourceExtractionRequest): Promise<SourceExtractionResult>;
+  readArtifact(artifactId: string): Promise<Uint8Array>;
   createPiTools(
     beforeExecute: () => Promise<void>,
     onExecutionError: (error: unknown) => void,
@@ -80,6 +90,12 @@ function normalizeTimestamp(value: unknown): string {
   return date.toISOString();
 }
 
+const snapshotToolNames = new Set([
+  ...tiaV20ModelMappings.map((mapping) => mapping.simonTool),
+  SOURCE_EXTRACTION_TOOL_NAME,
+  ARTIFACT_READ_TOOL_NAME,
+]);
+
 export class EngineeringMcpClient {
   readonly #client = new Client({ name: "simon-application", version: "0.1.0" });
   readonly #transport: StdioClientTransport;
@@ -94,7 +110,7 @@ export class EngineeringMcpClient {
       env: {
         PATH: process.env.PATH ?? "",
         SIMON_ENGINEERING_CONNECTOR: "tia-v20",
-        SIMON_TIA_V20_ARTIFACT_ROOT: process.env.SIMON_TIA_V20_ARTIFACT_ROOT ?? "",
+        SIMON_TIA_V20_ARTIFACT_ROOT: config.artifactRoot,
       },
       stderr: "pipe",
       maxBufferSize: 10_000_000,
@@ -163,6 +179,38 @@ export class EngineeringMcpClient {
     if (result.isError) throw new Error("Simon MCP could not read the bound project inventory.");
     const record = asRecord(result.structuredContent) ?? {};
     return optionalString(record, "tree") ?? JSON.stringify(result.structuredContent ?? result.content);
+  }
+
+  async callSnapshotTool(
+    name: string,
+    arguments_: Readonly<Record<string, unknown>>,
+    timeoutMs = 180_000,
+  ): Promise<Record<string, unknown>> {
+    if (!snapshotToolNames.has(name)) throw new Error(`Engineering snapshot tool '${name}' is not allowlisted.`);
+    await this.connectTransport();
+    const result = await this.#client.callTool(
+      { name, arguments: { ...arguments_ } },
+      undefined,
+      { timeout: timeoutMs },
+    );
+    if (result.isError) {
+      const detail = Array.isArray(result.content)
+        ? result.content.flatMap((item) => item.type === "text" ? [item.text] : []).join(" ")
+        : "";
+      throw new Error(detail || `Engineering snapshot tool '${name}' failed.`);
+    }
+    return asRecord(result.structuredContent) ?? {};
+  }
+
+  async extractSource(request: SourceExtractionRequest): Promise<SourceExtractionResult> {
+    return await this.callSnapshotTool(SOURCE_EXTRACTION_TOOL_NAME, request) as unknown as SourceExtractionResult;
+  }
+
+  async readArtifact(artifactId: string): Promise<Uint8Array> {
+    const result = await this.callSnapshotTool(ARTIFACT_READ_TOOL_NAME, { artifactId });
+    const encoded = objectValue(result, "contentBase64");
+    if (typeof encoded !== "string") throw new Error("Engineering artifact response did not include content.");
+    return Buffer.from(encoded, "base64");
   }
 
   async listCatalog(): Promise<Awaited<ReturnType<Client["listTools"]>>["tools"]> {

@@ -23,6 +23,7 @@ import {
 } from "@simon/contracts";
 import type { AssistantRuntime } from "./assistant-runtime.js";
 import type { EngineeringConnection } from "./engineering-connection.js";
+import type { EngineeringRetrievalToolProvider } from "./engineering-retrieval-tools.js";
 import { KnowledgeService } from "./knowledge-service.js";
 import {
   assertRuntimePolicy,
@@ -81,7 +82,7 @@ function createKnowledgeTool(): ToolDefinition<typeof knowledgeToolParameters> {
   };
 }
 
-function createRestrictedResourceLoader(policy: RuntimePolicy, projectName?: string): ResourceLoader {
+export function createRestrictedResourceLoader(policy: RuntimePolicy, projectName?: string): ResourceLoader {
   const tiaEnabled = policy.mode === "tia-readonly";
   return {
     getExtensions: () => ({ extensions: [], errors: [], runtime: createExtensionRuntime() }),
@@ -96,7 +97,10 @@ function createRestrictedResourceLoader(policy: RuntimePolicy, projectName?: str
           ? `You have a restricted set of read-only TIA Portal tools provided through Simon MCP for the explicitly bound project${projectName ? ` '${projectName}'` : ""}. You cannot select a process, import, compile, save, close, download to, or otherwise mutate a TIA project.`
           : "This application has one read-only tool for bundled synthetic examples. It has no TIA Portal, MCP, shell, filesystem, internet, or external mutation access.",
         "Never claim an unavailable integration is connected or that an external action was completed.",
-        "Treat snapshots and partial results truthfully, cite observed engineering paths, and distinguish facts, assumptions, proposals, and completed work.",
+        "For questions about project sources, tags, addresses, or references, check snapshot status first and use Simon's snapshot search/reference tools rather than relying on conversation memory.",
+        "Ground every material project claim in returned evidence. Cite the returned engineering path, preserve citation freshness and coverage, and state when the snapshot was observed.",
+        "If the snapshot is missing, stale, partial, ambiguous, or lacks the requested evidence, say so explicitly and ask the user to refresh or disambiguate; never fill gaps from assumptions.",
+        "Distinguish observed facts, assumptions, proposals, and completed work.",
       ].join("\n"),
     getSystemPromptSource: () => undefined,
     getAppendSystemPrompt: () => [],
@@ -117,6 +121,7 @@ export class PiAssistant implements AssistantRuntime {
     private readonly cwd: string,
     private readonly sessionDirectory: string,
     private readonly engineering: EngineeringConnection,
+    private readonly engineeringRetrievalTools?: EngineeringRetrievalToolProvider,
   ) {
     this.policy = getRuntimePolicy();
     assertRuntimePolicy(this.policy);
@@ -401,7 +406,10 @@ export class PiAssistant implements AssistantRuntime {
     const modelRuntime = await this.modelRuntimePromise;
     const engineeringStatus = this.engineering.getStatus(conversationId);
     const customTools = this.policy.mode === "tia-readonly"
-      ? [...await this.engineering.createPiTools(conversationId)]
+      ? [
+          ...await this.engineering.createPiTools(conversationId),
+          ...(this.engineeringRetrievalTools?.createPiTools(conversationId) ?? []),
+        ]
       : [createKnowledgeTool()];
     const { session } = await createAgentSession({
       cwd: this.cwd,

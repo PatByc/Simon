@@ -81,3 +81,13 @@ This log records durable project decisions. Concise summaries also appear in `re
 **Alternatives considered:** Automatically choose the first process with an open project; expose lifecycle tools to Pi; use process ID alone; keep one mutable project target shared by all conversations.
 
 **Consequences:** Selecting another target requires a new conversation or explicit safe reconciliation. Restarts require reconnection. Stale bindings fail closed. Simon can detach without closing TIA Portal, while compile, save, import, mutations, shell, filesystem, and online PLC operations remain blocked.
+
+## Binding-scoped read-only project snapshots — 2026-11-11
+
+**Context:** M2 needs searchable block source, interfaces, tags, references, and hardware evidence. Several Siemens read operations produce local exports, and repeatedly exporting during Pi turns would be slow, difficult to bound, and hard to cite consistently.
+
+**Decision:** Treat worker-controlled exports as artifact-producing reads, not project mutations. Only the Simon backend may create or refresh an immutable project snapshot. Each snapshot is tied to one project binding and connection epoch, stores bounded metadata in SQLite, stores larger normalized payloads in opaque application artifacts under ignored runtime storage, and exposes exact/FTS5 retrieval through Simon-owned contracts. Pi may query completed snapshots but cannot choose export paths or invoke internal export operations.
+
+**Alternatives considered:** Export directly during every Pi tool call; expose worker export paths to Pi; index raw MCP responses in the browser; use a cloud/vector index immediately; treat all filesystem output as forbidden.
+
+**Consequences:** Snapshot creation is explicit, cancellable, partial-aware, and freshness-sensitive. Detach, restart, target change, or epoch mismatch makes a snapshot stale for live claims. Exact lookup precedes lexical search, embeddings remain deferred, raw project/export paths stay private, and compile, import, save, source generation, project mutation, and online PLC operations remain blocked.

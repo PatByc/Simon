@@ -31,7 +31,7 @@ export function createTiaTool<TSchema extends z.ZodType>(
       invalidatesContext: mapping.invalidatesContext,
       timeoutMs: mapping.timeoutMs,
     },
-    qualification: "implemented",
+    qualification: "live-tested",
     handler: async (input, context) => connector.invoke(mapping.connectorOperation, input, context),
   };
 }

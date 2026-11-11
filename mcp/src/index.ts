@@ -6,6 +6,7 @@ export * from "./observability/index.js";
 export * from "./policy/index.js";
 export * from "./registry/index.js";
 export * from "./server/index.js";
+export * from "./sources/index.js";
 export * from "./testing/index.js";
 export * from "./tools/index.js";
 

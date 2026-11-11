@@ -9,6 +9,7 @@ using Siemens.Engineering.Safety;
 using Siemens.Engineering.SW;
 using Siemens.Engineering.SW.Blocks;
 using Siemens.Engineering.SW.ExternalSources;
+using Siemens.Engineering.SW.Tags;
 using Siemens.Engineering.SW.Types;
 using System;
 using System.Collections.Generic;
@@ -684,6 +685,45 @@ namespace TiaMcpServer.Siemens
             }
 
             return null; // "Error";
+        }
+
+        #endregion
+
+        #region tags
+
+        public List<PlcTagTable> GetTagTables(string softwarePath)
+        {
+            _logger?.LogInformation("Getting PLC tag tables...");
+
+            var list = new List<PlcTagTable>();
+            if (IsProjectNull())
+            {
+                return list;
+            }
+
+            var softwareContainer = GetSoftwareContainer(softwarePath);
+            if (softwareContainer?.Software is PlcSoftware plcSoftware && plcSoftware.TagTableGroup != null)
+            {
+                GetTagTablesRecursive(plcSoftware.TagTableGroup, list);
+            }
+
+            return list;
+        }
+
+        public string GetTagTablePath(PlcTagTable table)
+        {
+            if (table == null)
+            {
+                return string.Empty;
+            }
+
+            if (table.Parent is PlcTagTableGroup parentGroup)
+            {
+                var groupPath = GetPlcTagTableGroupPath(parentGroup);
+                return string.IsNullOrEmpty(groupPath) ? table.Name : $"{groupPath}/{table.Name}";
+            }
+
+            return table.Name;
         }
 
         #endregion
@@ -3562,6 +3602,41 @@ namespace TiaMcpServer.Siemens
             return path;
         }
 
+        private string GetPlcTagTableGroupPath(PlcTagTableGroup group)
+        {
+            if (group == null)
+            {
+                return string.Empty;
+            }
+
+            PlcTagTableGroup? nullableGroup = group;
+            var path = group.Name;
+
+            while (nullableGroup != null && nullableGroup.Parent != null)
+            {
+                try
+                {
+                    if (nullableGroup is PlcTagTableSystemGroup)
+                    {
+                        break;
+                    }
+
+                    nullableGroup = nullableGroup.Parent as PlcTagTableGroup;
+                }
+                catch (Exception)
+                {
+                    break;
+                }
+
+                if (nullableGroup != null)
+                {
+                    path = $"{nullableGroup.Name}/{path}";
+                }
+            }
+
+            return path;
+        }
+
         private string GetPlcTypeGroupPath(PlcTypeGroup group)
         {
             if (group == null)
@@ -3637,6 +3712,19 @@ namespace TiaMcpServer.Siemens
             }
 
             return anySuccess;
+        }
+
+        private void GetTagTablesRecursive(PlcTagTableGroup group, List<PlcTagTable> list)
+        {
+            foreach (PlcTagTable table in group.TagTables)
+            {
+                list.Add(table);
+            }
+
+            foreach (PlcTagTableGroup subgroup in group.Groups)
+            {
+                GetTagTablesRecursive(subgroup, list);
+            }
         }
 
         private bool GetBlocksRecursive(PlcBlockGroup group, List<PlcBlock> list, string regexName = "")

@@ -57,7 +57,7 @@ Updated: 2026-11-09
 - [x] **44. Live TIA qualification.** The incorporated worker attached through Siemens Openness to the `aiagent` TIA V20 instance with an open local project. State, open-project listing, and project-tree retrieval succeeded.
 - [x] 45. Workflows remain in the Simon application/Pi layer; the connector exposes atomic capabilities only.
 - [x] 46. Approval authority remains in the Simon application backend; no approval or proposal authority exists in `Simon/mcp`.
-- [x] 47. The initial read-only mapping was compared with the live MCP catalog: 18 model tools and three host-only lifecycle tools.
+- [x] 47. The initial M1 read-only mapping was compared with the live MCP catalog: 18 model tools and three host-only lifecycle tools; M2 later expanded the current catalog to 20 model tools and five host-only lifecycle/artifact tools.
 - [x] 48. `README.md` documents the incorporated architecture and exact live evidence.
 - [x] 49. The expansion checklist was applied to host-only process discovery and selected-process attachment.
 - [x] 50. A direct unclassified `SaveProject` call was rejected by the Simon MCP façade.
@@ -66,13 +66,25 @@ Updated: 2026-11-09
 - [x] 53. Conversation-scoped project bindings and connection epochs guard every Pi engineering tool call.
 - [x] 54. Bounded inventory, capability coverage, diagnostics, safe detach, and reconnect-required restart behavior were application-live-qualified.
 
+## M2 read-only extraction and retrieval
+
+- [x] 55. Direct PLC tag-table and tag enumeration were added and live-qualified.
+- [x] 56. Host-only bounded source extraction and opaque artifact reads were added with Simon-owned paths and cleanup.
+- [x] 57. SCL, LAD, FBD, DB, UDT, OB, FB, FC, and interface representations were qualified independently with explicit limitations.
+- [x] 58. Immutable binding-scoped snapshots now persist metadata, coverage, freshness, provenance, and stale state.
+- [x] 59. Exact path/name/identifier/address retrieval precedes SQLite FTS5 lexical fallback and duplicate-name ambiguity fails closed.
+- [x] 60. Pi receives only snapshot status, search, and exact-reference tools; lifecycle, refresh, export, and artifact tools remain host-only.
+- [x] 61. The browser receives host-controlled snapshot, search, and reference endpoints with bounded citations and no raw local paths.
+- [x] 62. The complete Simon path was live-qualified, including a grounded Pi answer, detach invalidation, and project survival.
+- [x] 63. The current catalog reports 20 model-visible direct TIA reads and five host-only lifecycle/artifact operations; the application adds three guarded snapshot retrieval tools.
+
 ## Last automated verification
 
-- MCP TypeScript tests: 17 passed.
+- MCP TypeScript tests: 22 passed.
 - Incorporated worker tests: 2 passed.
-- Server tests: 34 passed.
-- Web tests: 15 passed.
-- Contract tests: 9 passed.
+- Server tests: 71 passed.
+- Web tests: 17 passed.
+- Contract tests: 13 passed.
 - Full workspace typecheck: passed.
 - Production build: passed.
 - npm audit: 0 vulnerabilities.

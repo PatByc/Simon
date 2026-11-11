@@ -3,23 +3,12 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { tiaV20ToolMap } from "../src/connectors/tia/v20/tool-map.js";
 
-const liveCalled = new Set([
-  "GetPortalProcesses",
-  "Connect",
-  "Disconnect",
-  "GetState",
-  "GetProject",
-  "GetProjectTree",
-]);
-
 const rows = tiaV20ToolMap.map((item) => {
-  const status = liveCalled.has(item.upstreamTool)
+  const status = item.exposure === "model" || item.exposure === "host"
     ? "live-tested"
-    : item.exposure === "model"
-      ? "fake-tested; live catalog-qualified"
-      : item.exposure === "blocked" || item.exposure === "internal"
-        ? "denied by façade"
-        : "implemented";
+    : item.exposure === "blocked" || item.exposure === "internal"
+      ? "denied by façade"
+      : "implemented";
   return `| \`${item.upstreamTool}\` | \`${item.connectorOperation}\` | ${item.simonTool ? `\`${item.simonTool}\`` : "—"} | ${item.effect} | ${item.exposure} | ${item.requiresConnection ? "yes" : "no"} | ${item.requiresProjectBinding ? "yes" : "no"} | ${item.createsArtifacts ? "yes" : "no"} | ${status} |`;
 });
 

@@ -8,6 +8,7 @@ import { createDeviceTools } from "./devices.js";
 import { createPlcTypeTools } from "./plc-types.js";
 import { createProjectTools } from "./project.js";
 import { createSoftwareTools } from "./software.js";
+import { createTagTools } from "./tags.js";
 
 export function createTiaTools(connector: EngineeringConnector): readonly ToolDefinition[] {
   return [
@@ -15,6 +16,7 @@ export function createTiaTools(connector: EngineeringConnector): readonly ToolDe
     ...createProjectTools(connector, tiaV20ModelMappings),
     ...createDeviceTools(connector, tiaV20ModelMappings),
     ...createSoftwareTools(connector, tiaV20ModelMappings),
+    ...createTagTools(connector, tiaV20ModelMappings),
     ...createBlockTools(connector, tiaV20ModelMappings),
     ...createAnalysisTools(connector, tiaV20ModelMappings),
     ...createPlcTypeTools(connector, tiaV20ModelMappings),

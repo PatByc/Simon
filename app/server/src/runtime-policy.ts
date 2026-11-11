@@ -9,6 +9,8 @@ export const TIA_READONLY_TOOL_NAMES = Object.freeze([
   "simon_tia_get_device_item",
   "simon_tia_get_software",
   "simon_tia_get_software_tree",
+  "simon_tia_list_tag_tables",
+  "simon_tia_list_tags",
   "simon_tia_get_block",
   "simon_tia_find_blocks",
   "simon_tia_get_block_tree",
@@ -19,6 +21,9 @@ export const TIA_READONLY_TOOL_NAMES = Object.freeze([
   "simon_tia_analyze_analog_outputs",
   "simon_tia_get_plc_type",
   "simon_tia_find_plc_types",
+  "simon_engineering_snapshot_status",
+  "simon_engineering_search",
+  "simon_engineering_find_references",
 ] as const);
 
 export const RUNTIME_POLICY = Object.freeze({

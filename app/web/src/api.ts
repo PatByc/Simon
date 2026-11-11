@@ -10,6 +10,10 @@ import {
   engineeringDiagnosticsSchema,
   engineeringInventorySchema,
   engineeringProcessListSchema,
+  engineeringReferenceSearchResponseSchema,
+  engineeringSearchResponseSchema,
+  engineeringSnapshotSchema,
+  engineeringSnapshotStatusResponseSchema,
   engineeringStatusSchema,
   projectBindingSchema,
   knowledgeSearchResponseSchema,
@@ -25,6 +29,9 @@ import {
   type EngineeringCapabilities,
   type EngineeringDiagnostics,
   type EngineeringInventory,
+  type EngineeringReferenceSearchResponse,
+  type EngineeringSearchResponse,
+  type EngineeringSnapshot,
   type EngineeringStatus,
   type KnowledgeSearchResponse,
   type ProjectBinding,
@@ -101,6 +108,34 @@ export async function getEngineeringDiagnostics(): Promise<EngineeringDiagnostic
 export async function getEngineeringInventory(conversationId: string): Promise<EngineeringInventory> {
   const response = await fetch(`/api/v1/conversations/${conversationId}/engineering-inventory`);
   return engineeringInventorySchema.parse(await parseJson(response));
+}
+
+export async function getEngineeringSnapshot(conversationId: string): Promise<EngineeringSnapshot | null> {
+  const response = await fetch(`/api/v1/conversations/${conversationId}/engineering-snapshot`);
+  return engineeringSnapshotStatusResponseSchema.parse(await parseJson(response)).snapshot;
+}
+
+export async function refreshEngineeringSnapshot(conversationId: string, forceRefresh = false): Promise<EngineeringSnapshot> {
+  const response = await fetch(`/api/v1/conversations/${conversationId}/engineering-snapshot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ forceRefresh }),
+  });
+  return engineeringSnapshotSchema.parse(await parseJson(response));
+}
+
+export async function searchEngineeringSnapshot(conversationId: string, query: string): Promise<EngineeringSearchResponse> {
+  const response = await fetch(`/api/v1/conversations/${conversationId}/engineering-search`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, limit: 20 }),
+  });
+  return engineeringSearchResponseSchema.parse(await parseJson(response));
+}
+
+export async function findEngineeringReferences(conversationId: string, symbol: string): Promise<EngineeringReferenceSearchResponse> {
+  const response = await fetch(`/api/v1/conversations/${conversationId}/engineering-references?symbol=${encodeURIComponent(symbol)}`);
+  return engineeringReferenceSearchResponseSchema.parse(await parseJson(response));
 }
 
 export async function searchConversations(query: string): Promise<ConversationSearchResult[]> {

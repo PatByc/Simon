@@ -13,16 +13,16 @@
 
 Manual browser qualification remains tracked in `docs/MANUAL_QA.md` and `docs/M1_CHECKLIST.md`.
 
-## Now — M2 source extraction and retrieval
+## Completed — M2 source extraction and retrieval
 
-- Qualify representative block, type, interface, tag, reference, and hardware reads.
-- Add explicit PLC tag-table/tag enumeration and counting.
-- Build project snapshots with binding, freshness, coverage, and provenance.
-- Add exact and lexical project retrieval with source-linked answers.
-- Add bounded SCL and supported FBD/LAD reading without enabling writes.
-- Investigate incomplete nested hardware visibility and report unsupported coverage.
+- Qualified representative block, type, interface, tag, reference, and hardware reads with explicit partials.
+- Added direct PLC tag-table/tag enumeration and counting.
+- Added immutable bounded snapshots with binding, freshness, coverage, provenance, persistence, and stale invalidation.
+- Added exact and SQLite FTS5 retrieval, references, citations, and three application-owned Pi tools.
+- Added controlled SCL, LAD, FBD, DB, and UDT extraction without enabling writes or reconstructing graphical source.
+- Live-qualified the full Simon path through grounded Pi answers, detach guards, and project-survival checks.
 
-## Next — Documentation and conventions
+## Now — Documentation and conventions
 
 - Discover version-correct Siemens documentation sources.
 - Add sourced instruction retrieval.
