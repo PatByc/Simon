@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
 import {
   apiErrorSchema,
+  attachEngineeringRequestSchema,
   createConversationRequestSchema,
   createRunRequestSchema,
   editRunRequestSchema,
@@ -13,9 +14,11 @@ import {
   type StreamEvent,
 } from "@simon/contracts";
 import type { AssistantRuntime } from "./assistant-runtime.js";
+import { EngineeringConnectionManager, type EngineeringConnection } from "./engineering-connection.js";
 import { FakeAssistant } from "./fake-assistant.js";
 import { KnowledgeService } from "./knowledge-service.js";
 import { ProposalConflictError, ProposalService } from "./proposal-service.js";
+import { getRuntimePolicy } from "./runtime-policy.js";
 import { InMemoryStore } from "./store.js";
 import { UsageService } from "./usage-service.js";
 
@@ -24,6 +27,7 @@ export interface BuildAppOptions {
   assistant?: AssistantRuntime;
   logger?: boolean;
   usageService?: UsageService;
+  engineering?: EngineeringConnection;
 }
 
 function apiError(code: string, message: string): ApiError {
@@ -41,6 +45,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const proposals = new ProposalService(store);
   const knowledge = new KnowledgeService();
   const usage = options.usageService ?? new UsageService();
+  const engineering = options.engineering ?? new EngineeringConnectionManager(store, getRuntimePolicy({}), null);
 
   app.decorate("simonStore", store);
 
@@ -58,10 +63,64 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.addHook("onClose", async () => {
     await assistant.dispose?.();
+    await engineering.close();
     store.close();
   });
 
   app.get("/api/v1/status", async () => assistant.getStatus());
+
+  app.get<{ Querystring: { conversationId?: string } }>("/api/v1/engineering/status", async (request) =>
+    engineering.getStatus(request.query.conversationId));
+
+  app.get("/api/v1/engineering/processes", async (_request, reply) => {
+    try {
+      return await engineering.listProcesses();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "TIA process discovery failed";
+      return reply.code(409).send(apiError("engineering_discovery_failed", message));
+    }
+  });
+
+  app.get("/api/v1/engineering/capabilities", async () => engineering.getCapabilities());
+  app.get("/api/v1/engineering/diagnostics", async () => engineering.getDiagnostics());
+
+  app.post<{ Params: { conversationId: string } }>(
+    "/api/v1/conversations/:conversationId/engineering-binding",
+    async (request, reply) => {
+      const parsed = attachEngineeringRequestSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid TIA process selection"));
+      try {
+        const binding = await engineering.attach(request.params.conversationId, parsed.data);
+        await assistant.disposeConversation?.(request.params.conversationId);
+        return reply.code(201).send(binding);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "TIA attachment failed";
+        return reply.code(409).send(apiError("engineering_attachment_failed", message));
+      }
+    },
+  );
+
+  app.delete("/api/v1/engineering/connection", async (_request, reply) => {
+    try {
+      await engineering.detach();
+      return reply.code(204).send();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "TIA disconnect failed";
+      return reply.code(409).send(apiError("engineering_disconnect_failed", message));
+    }
+  });
+
+  app.get<{ Params: { conversationId: string } }>(
+    "/api/v1/conversations/:conversationId/engineering-inventory",
+    async (request, reply) => {
+      try {
+        return await engineering.getInventory(request.params.conversationId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Engineering inventory failed";
+        return reply.code(409).send(apiError("engineering_inventory_failed", message));
+      }
+    },
+  );
 
   app.get("/api/v1/usage", async (_request, reply) => {
     reply.header("Cache-Control", "no-store");

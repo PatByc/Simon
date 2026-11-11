@@ -3,8 +3,11 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import { buildApp } from "./app.js";
+import { EngineeringConnectionManager } from "./engineering-connection.js";
+import { EngineeringMcpClient } from "./engineering-mcp-client.js";
 import { FakeAssistant } from "./fake-assistant.js";
 import { PiAssistant } from "./pi-assistant.js";
+import { getRuntimePolicy } from "./runtime-policy.js";
 import { InMemoryStore } from "./store.js";
 import { UsageService } from "./usage-service.js";
 
@@ -14,14 +17,24 @@ const port = Number.parseInt(process.env.SIMON_PORT ?? "4310", 10);
 const runtimeName = process.env.SIMON_RUNTIME ?? "pi";
 const dataDirectory = resolve(process.env.SIMON_DATA_DIR ?? resolve(projectRoot, "data"));
 const store = new InMemoryStore(resolve(dataDirectory, "simon.sqlite"));
+const engineeringPolicy = getRuntimePolicy();
+const engineeringClient = engineeringPolicy.mode === "tia-readonly"
+  ? new EngineeringMcpClient({
+      command: process.execPath,
+      args: [resolve(projectRoot, "mcp/dist/src/main.js")],
+      cwd: projectRoot,
+    })
+  : null;
+const engineering = new EngineeringConnectionManager(store, engineeringPolicy, engineeringClient);
 const assistant = runtimeName === "fake"
   ? new FakeAssistant(store)
-  : new PiAssistant(store, projectRoot, resolve(dataDirectory, "pi-sessions"));
+  : new PiAssistant(store, projectRoot, resolve(dataDirectory, "pi-sessions"), engineering);
 const app = buildApp({
   logger: true,
   store,
   assistant,
   usageService: new UsageService(resolve(process.env.USERPROFILE ?? "", ".pi/agent/auth.json")),
+  engineering,
 });
 const webRoot = resolve(projectRoot, "app/web/dist");
 

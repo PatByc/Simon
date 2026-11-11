@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { ChatMessage, Conversation, ConversationSearchResult, Proposal, Run, StreamEvent } from "@simon/contracts";
+import { projectBindingSchema, type ChatMessage, type Conversation, type ConversationSearchResult, type Proposal, type Run, type StreamEvent } from "@simon/contracts";
 
 export interface StoredRun {
   run: Run;
@@ -27,6 +27,7 @@ interface ConversationRow {
   thinking_level: string | null;
   approval_mode: "manual" | "auto";
   status: Conversation["status"];
+  project_binding_json: string | null;
 }
 
 export class InMemoryStore {
@@ -55,7 +56,8 @@ export class InMemoryStore {
         selected_model TEXT,
         thinking_level TEXT,
         approval_mode TEXT NOT NULL,
-        status TEXT NOT NULL
+        status TEXT NOT NULL,
+        project_binding_json TEXT
       );
       CREATE VIRTUAL TABLE IF NOT EXISTS conversation_search USING fts5(
         conversation_id UNINDEXED,
@@ -65,6 +67,10 @@ export class InMemoryStore {
         tokenize = 'unicode61'
       );
     `);
+    const conversationColumns = this.database.prepare("PRAGMA table_info(conversations)").all() as unknown as Array<{ name: string }>;
+    if (!conversationColumns.some((column) => column.name === "project_binding_json")) {
+      this.database.exec("ALTER TABLE conversations ADD COLUMN project_binding_json TEXT");
+    }
     this.loadConversations();
   }
 
@@ -80,13 +86,14 @@ export class InMemoryStore {
       thinkingLevel: null,
       approvalMode: input.approvalMode,
       status: "idle",
+      projectBinding: null,
     };
     this.conversations.set(conversation.conversationId, conversation);
     this.saveConversation(conversation);
     return conversation;
   }
 
-  updateConversation(conversationId: string, changes: Partial<Pick<Conversation, "title" | "approvalMode" | "selectedModel" | "thinkingLevel" | "status">>): Conversation | undefined {
+  updateConversation(conversationId: string, changes: Partial<Pick<Conversation, "title" | "approvalMode" | "selectedModel" | "thinkingLevel" | "status" | "projectBinding">>): Conversation | undefined {
     const conversation = this.conversations.get(conversationId);
     if (!conversation) return undefined;
     Object.assign(conversation, changes, { updatedAt: new Date().toISOString() });
@@ -122,8 +129,8 @@ export class InMemoryStore {
     this.database.prepare(`
       INSERT INTO conversations (
         conversation_id, pi_session_id, pi_session_path, title, created_at, updated_at,
-        selected_model, thinking_level, approval_mode, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        selected_model, thinking_level, approval_mode, status, project_binding_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(conversation_id) DO UPDATE SET
         pi_session_id = excluded.pi_session_id,
         pi_session_path = excluded.pi_session_path,
@@ -132,7 +139,8 @@ export class InMemoryStore {
         selected_model = excluded.selected_model,
         thinking_level = excluded.thinking_level,
         approval_mode = excluded.approval_mode,
-        status = excluded.status
+        status = excluded.status,
+        project_binding_json = excluded.project_binding_json
     `).run(
       conversation.conversationId,
       conversation.piSessionId,
@@ -144,6 +152,7 @@ export class InMemoryStore {
       conversation.thinkingLevel,
       conversation.approvalMode,
       conversation.status,
+      conversation.projectBinding ? JSON.stringify(conversation.projectBinding) : null,
     );
   }
 
@@ -240,6 +249,9 @@ export class InMemoryStore {
         thinkingLevel: row.thinking_level,
         approvalMode: row.approval_mode,
         status,
+        projectBinding: row.project_binding_json
+          ? projectBindingSchema.parse(JSON.parse(row.project_binding_json))
+          : null,
       };
       this.conversations.set(conversation.conversationId, conversation);
       if (row.pi_session_path) this.sessionPaths.set(conversation.conversationId, row.pi_session_path);

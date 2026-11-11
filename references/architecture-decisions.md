@@ -52,3 +52,10 @@
 **Reason:** Node and npm are already installed and verified on the target machine.
 **Trade-offs:** The plan's original pnpm recommendation is deferred unless npm becomes a constraint.
 **Date:** 2026-11-07
+
+## ADR-007: Use explicit conversation-scoped TIA bindings
+
+**Decision:** Keep process discovery, attachment, and detach host-controlled; bind each engineering conversation to a project identity and connection epoch verified before every Pi tool call.
+**Reason:** Prevent silent process selection, PID reuse, cross-conversation target leakage, and stale reads after project changes or application restarts.
+**Trade-offs:** TIA mode requires an explicit UI connection step, restarts require reconnection, and switching projects requires a new conversation or separate reconciliation flow.
+**Date:** 2026-11-09

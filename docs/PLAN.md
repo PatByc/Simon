@@ -424,4 +424,8 @@ The second phase adds a Simon-owned MCP package and an incorporated, attributed 
 
 Live qualification completed through the Simon MCP façade: process discovery, attachment, state, project listing, project-tree retrieval, disconnect, and denial of a raw `SaveProject` call all succeeded. Workflow composition and approval authority remain in the application layer, not `Simon/mcp`. See `mcp/README.md`, `mcp/TOOL_MAPPING.md`, `mcp/IMPLEMENTATION_PLAN.md`, and `mcp/LIVE_QUALIFICATION.md`.
 
-Electron packaging is the next product phase after acceptance of this restricted MCP/TIA boundary.
+### M1 product attachment completion — 2026-11-09
+
+The application now owns explicit TIA process discovery, process-start identity validation, conversation-scoped project bindings, connection epochs, reconnect-required restart behavior, bounded inventory, diagnostics, capability/coverage reporting, and per-tool binding guards. The model cannot discover, select, attach, detach, or switch TIA targets. Application-level live qualification confirmed explicit attachment, real project inventory, a tool-backed Pi answer, safe detach with TIA remaining open, and stale/disconnected behavior after restart.
+
+Manual browser qualification remains in `docs/MANUAL_QA.md` and `docs/M1_CHECKLIST.md`. M2 source extraction and retrieval is the next engineering milestone. Electron packaging remains optional release hardening and must not replace the M2 retrieval work required by `docs/Simon_v0_3.md`.

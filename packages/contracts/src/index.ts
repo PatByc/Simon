@@ -17,6 +17,112 @@ export const conversationStatusSchema = z.enum([
 ]);
 export type ConversationStatus = z.infer<typeof conversationStatusSchema>;
 
+export const engineeringModeSchema = z.enum(["synthetic", "tia-readonly"]);
+export type EngineeringMode = z.infer<typeof engineeringModeSchema>;
+
+export const engineeringConnectionStateSchema = z.enum([
+  "disabled",
+  "disconnected",
+  "discovering",
+  "connecting",
+  "connected",
+  "stale",
+  "failed",
+]);
+export type EngineeringConnectionState = z.infer<typeof engineeringConnectionStateSchema>;
+
+export const tiaProcessSchema = z.object({
+  processId: z.number().int().positive(),
+  processStartTime: timestampSchema,
+  acquisitionTime: timestampSchema,
+  hasProject: z.boolean(),
+});
+export type TiaProcess = z.infer<typeof tiaProcessSchema>;
+
+export const projectBindingSchema = z.object({
+  bindingId: idSchema,
+  epoch: idSchema,
+  processId: z.number().int().positive(),
+  processStartTime: timestampSchema,
+  projectName: z.string().min(1),
+  projectPathHash: z.string().regex(/^[a-f0-9]{64}$/),
+  observedAt: timestampSchema,
+});
+export type ProjectBinding = z.infer<typeof projectBindingSchema>;
+
+export const engineeringCapabilityStatusSchema = z.enum([
+  "live-tested",
+  "fake-tested",
+  "not-tested",
+  "partial",
+  "disabled",
+  "out-of-scope",
+]);
+export type EngineeringCapabilityStatus = z.infer<typeof engineeringCapabilityStatusSchema>;
+
+export const engineeringCapabilitySchema = z.object({
+  capability: z.string().min(1),
+  label: z.string().min(1),
+  status: engineeringCapabilityStatusSchema,
+  available: z.boolean(),
+  note: z.string().min(1),
+});
+export type EngineeringCapability = z.infer<typeof engineeringCapabilitySchema>;
+
+export const engineeringStatusSchema = z.object({
+  mode: engineeringModeSchema,
+  state: engineeringConnectionStateSchema,
+  binding: projectBindingSchema.nullable(),
+  conversationBindingMatches: z.boolean(),
+  reason: z.string().optional(),
+  observedAt: timestampSchema,
+});
+export type EngineeringStatus = z.infer<typeof engineeringStatusSchema>;
+
+export const engineeringProcessListSchema = z.object({
+  processes: z.array(tiaProcessSchema),
+  observedAt: timestampSchema,
+});
+export type EngineeringProcessList = z.infer<typeof engineeringProcessListSchema>;
+
+export const attachEngineeringRequestSchema = z.object({
+  processId: z.number().int().positive(),
+  processStartTime: timestampSchema,
+});
+export type AttachEngineeringRequest = z.infer<typeof attachEngineeringRequestSchema>;
+
+export const engineeringInventorySchema = z.object({
+  binding: projectBindingSchema,
+  observedAt: timestampSchema,
+  projectTree: z.string(),
+  partial: z.boolean(),
+  coverage: z.array(z.string().min(1)),
+});
+export type EngineeringInventory = z.infer<typeof engineeringInventorySchema>;
+
+export const engineeringDiagnosticsSchema = z.object({
+  mode: engineeringModeSchema,
+  piIntegration: z.literal("sdk"),
+  piPackageVersion: z.string().min(1),
+  mcpPackageVersion: z.string().min(1),
+  connector: z.string().min(1),
+  tiaMajorVersion: z.number().int().positive().nullable(),
+  workerAvailable: z.boolean(),
+  modelToolCount: z.number().int().nonnegative(),
+  hostToolCount: z.number().int().nonnegative(),
+  processCount: z.number().int().nonnegative().nullable(),
+  activeBinding: projectBindingSchema.nullable(),
+  warnings: z.array(z.string()),
+  observedAt: timestampSchema,
+});
+export type EngineeringDiagnostics = z.infer<typeof engineeringDiagnosticsSchema>;
+
+export const engineeringCapabilitiesSchema = z.object({
+  capabilities: z.array(engineeringCapabilitySchema),
+  observedAt: timestampSchema,
+});
+export type EngineeringCapabilities = z.infer<typeof engineeringCapabilitiesSchema>;
+
 export const conversationSchema = z.object({
   conversationId: idSchema,
   piSessionId: z.string().min(1).nullable(),
@@ -27,6 +133,7 @@ export const conversationSchema = z.object({
   thinkingLevel: z.string().min(1).nullable(),
   approvalMode: approvalModeSchema,
   status: conversationStatusSchema,
+  projectBinding: projectBindingSchema.nullable().default(null),
 });
 export type Conversation = z.infer<typeof conversationSchema>;
 

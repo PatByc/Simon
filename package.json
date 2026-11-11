@@ -15,6 +15,7 @@
     "dev:web": "npm run dev --workspace @simon/web",
     "dev:server": "npm run dev --workspace @simon/server",
     "start": "npm run build && npm run start --workspace @simon/server",
+    "doctor": "npm run doctor --workspace @simon/server",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },

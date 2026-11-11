@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
+import type { EngineeringConnection } from "./engineering-connection.js";
 import { FakeAssistant } from "./fake-assistant.js";
 import { InMemoryStore } from "./store.js";
 
@@ -38,6 +39,78 @@ describe("Simon API", () => {
         scope: "Deterministic local test responses only",
       },
     });
+  });
+
+  it("keeps engineering lifecycle operations behind host-controlled endpoints", async () => {
+    const store = new InMemoryStore();
+    const binding = {
+      bindingId: "d07f4af7-95a5-467c-89f5-ded7bc703b62",
+      epoch: "5df7d2e5-1c72-4aaf-b98a-cf8525538950",
+      processId: 42,
+      processStartTime: "2026-11-09T09:00:00.000Z",
+      projectName: "Plant",
+      projectPathHash: "a".repeat(64),
+      observedAt: "2026-11-09T10:00:00.000Z",
+    };
+    const engineering: EngineeringConnection = {
+      getStatus: () => ({
+        mode: "tia-readonly",
+        state: "disconnected",
+        binding: null,
+        conversationBindingMatches: false,
+        observedAt: "2026-11-09T10:00:00.000Z",
+      }),
+      listProcesses: vi.fn(async () => ({
+        processes: [{
+          processId: 42,
+          processStartTime: binding.processStartTime,
+          acquisitionTime: "2026-11-09T10:00:00.000Z",
+          hasProject: true,
+        }],
+        observedAt: "2026-11-09T10:00:00.000Z",
+      })),
+      attach: vi.fn(async () => binding),
+      detach: vi.fn(async () => undefined),
+      getCapabilities: () => ({ capabilities: [], observedAt: "2026-11-09T10:00:00.000Z" }),
+      getDiagnostics: () => ({
+        mode: "tia-readonly",
+        piIntegration: "sdk",
+        piPackageVersion: "1.5.0",
+        mcpPackageVersion: "0.1.0",
+        connector: "tia-v20",
+        tiaMajorVersion: 20,
+        workerAvailable: true,
+        modelToolCount: 18,
+        hostToolCount: 3,
+        processCount: 1,
+        activeBinding: null,
+        warnings: [],
+        observedAt: "2026-11-09T10:00:00.000Z",
+      }),
+      getInventory: vi.fn(async () => ({
+        binding,
+        observedAt: "2026-11-09T10:00:00.000Z",
+        projectTree: "Plant",
+        partial: true,
+        coverage: ["Bounded"],
+      })),
+      createPiTools: vi.fn(async () => []),
+      close: vi.fn(async () => undefined),
+    };
+    const app = buildApp({ store, assistant: new FakeAssistant(store, 0), engineering });
+    apps.push(app);
+    const created = await app.inject({ method: "POST", url: "/api/v1/conversations", payload: {} });
+    const conversationId = created.json().conversationId as string;
+
+    expect((await app.inject({ method: "GET", url: "/api/v1/engineering/processes" })).statusCode).toBe(200);
+    const attached = await app.inject({
+      method: "POST",
+      url: `/api/v1/conversations/${conversationId}/engineering-binding`,
+      payload: { processId: 42, processStartTime: binding.processStartTime },
+    });
+    expect(attached.statusCode).toBe(201);
+    expect(attached.json()).toEqual(binding);
+    expect((await app.inject({ method: "DELETE", url: "/api/v1/engineering/connection" })).statusCode).toBe(204);
   });
 
   it("creates a conversation with manual approval by default", async () => {

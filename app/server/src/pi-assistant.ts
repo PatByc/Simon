@@ -22,7 +22,7 @@ import {
   type UpdateRuntimeRequest,
 } from "@simon/contracts";
 import type { AssistantRuntime } from "./assistant-runtime.js";
-import { EngineeringMcpClient } from "./engineering-mcp-client.js";
+import type { EngineeringConnection } from "./engineering-connection.js";
 import { KnowledgeService } from "./knowledge-service.js";
 import {
   assertRuntimePolicy,
@@ -81,7 +81,7 @@ function createKnowledgeTool(): ToolDefinition<typeof knowledgeToolParameters> {
   };
 }
 
-function createRestrictedResourceLoader(policy: RuntimePolicy): ResourceLoader {
+function createRestrictedResourceLoader(policy: RuntimePolicy, projectName?: string): ResourceLoader {
   const tiaEnabled = policy.mode === "tia-readonly";
   return {
     getExtensions: () => ({ extensions: [], errors: [], runtime: createExtensionRuntime() }),
@@ -93,7 +93,7 @@ function createRestrictedResourceLoader(policy: RuntimePolicy): ResourceLoader {
       [
         "You are Simon, a concise local engineering assistant.",
         tiaEnabled
-          ? "You have a restricted set of read-only TIA Portal tools provided through Simon MCP. You cannot import, compile, save, close, download to, or otherwise mutate a TIA project."
+          ? `You have a restricted set of read-only TIA Portal tools provided through Simon MCP for the explicitly bound project${projectName ? ` '${projectName}'` : ""}. You cannot select a process, import, compile, save, close, download to, or otherwise mutate a TIA project.`
           : "This application has one read-only tool for bundled synthetic examples. It has no TIA Portal, MCP, shell, filesystem, internet, or external mutation access.",
         "Never claim an unavailable integration is connected or that an external action was completed.",
         "Treat snapshots and partial results truthfully, cite observed engineering paths, and distinguish facts, assumptions, proposals, and completed work.",
@@ -111,22 +111,15 @@ export class PiAssistant implements AssistantRuntime {
   private readonly sessions = new Map<string, ManagedSession>();
   private readonly modelRuntimePromise: Promise<ModelRuntime>;
   private readonly policy: RuntimePolicy;
-  private readonly engineeringMcp: EngineeringMcpClient | null;
 
   constructor(
     private readonly store: InMemoryStore,
     private readonly cwd: string,
     private readonly sessionDirectory: string,
+    private readonly engineering: EngineeringConnection,
   ) {
     this.policy = getRuntimePolicy();
     assertRuntimePolicy(this.policy);
-    this.engineeringMcp = this.policy.mode === "tia-readonly"
-      ? new EngineeringMcpClient({
-          command: process.execPath,
-          args: [join(this.cwd, "mcp", "dist", "src", "main.js")],
-          cwd: this.cwd,
-        })
-      : null;
     const agentDir = getAgentDir();
     this.modelRuntimePromise = ModelRuntime.create({
       authPath: join(agentDir, "auth.json"),
@@ -386,7 +379,6 @@ export class PiAssistant implements AssistantRuntime {
   async dispose(): Promise<void> {
     for (const managed of this.sessions.values()) managed.session.dispose();
     this.sessions.clear();
-    await this.engineeringMcp?.close();
   }
 
   private capabilities(): AssistantStatus["capabilities"] {
@@ -407,8 +399,9 @@ export class PiAssistant implements AssistantRuntime {
       ? SessionManager.open(existingPath)
       : SessionManager.create(this.cwd, this.sessionDirectory);
     const modelRuntime = await this.modelRuntimePromise;
-    const customTools = this.engineeringMcp
-      ? [...await this.engineeringMcp.createPiTools()]
+    const engineeringStatus = this.engineering.getStatus(conversationId);
+    const customTools = this.policy.mode === "tia-readonly"
+      ? [...await this.engineering.createPiTools(conversationId)]
       : [createKnowledgeTool()];
     const { session } = await createAgentSession({
       cwd: this.cwd,
@@ -416,7 +409,7 @@ export class PiAssistant implements AssistantRuntime {
       noTools: "builtin",
       tools: [...this.policy.allowedTools],
       customTools,
-      resourceLoader: createRestrictedResourceLoader(this.policy),
+      resourceLoader: createRestrictedResourceLoader(this.policy, engineeringStatus.binding?.projectName),
       sessionManager,
     });
     const conversation = this.store.conversations.get(conversationId);

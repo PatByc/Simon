@@ -81,8 +81,9 @@ Open `http://127.0.0.1:4310`.
 - [ ] Model and thinking changes survive a server restart.
 - [ ] Runtime changes are rejected during an active run.
 - [ ] Missing credentials/models disable the composer with a clear reason.
-- [ ] Capability disclosure lists only `simon_search_synthetic_knowledge`.
-- [ ] Shell, filesystem, MCP, browser, internet-tool, and TIA access remain disabled.
+- [ ] Synthetic mode lists only `simon_search_synthetic_knowledge`.
+- [ ] TIA read-only mode lists exactly the classified Simon TIA read tools.
+- [ ] Shell, arbitrary filesystem, browser, internet, compile, save, import, mutation, and online PLC access remain disabled in every mode.
 
 ## Usage indicator
 
@@ -106,6 +107,27 @@ Search the synthetic examples for pump restart logic and cite the sources.
 - [ ] Source cards match returned paths and excerpts.
 - [ ] Simon explicitly says the results are synthetic and incomplete.
 - [ ] Simon does not claim access to a real TIA project.
+
+## M1 TIA read-only attachment
+
+Start with:
+
+```powershell
+./scripts/start-simon.ps1 -EngineeringMode tia-readonly
+```
+
+- [ ] Settings initially shows TIA disconnected; no automatic attachment occurs.
+- [ ] Discover TIA processes lists PID, stable process start time, discovery time, and open-project availability.
+- [ ] The user must explicitly choose a process and select Connect read only.
+- [ ] The bound project name, read-only state, observation time, and binding ID are visible.
+- [ ] Inspect inventory returns the bounded project hierarchy and explicit coverage limitations.
+- [ ] Asking which project is connected produces a real tool-backed answer.
+- [ ] Disconnect Simon leaves TIA Portal and the project open.
+- [ ] Restarting Simon shows Reconnect required for the saved conversation.
+- [ ] A conversation already bound to another target cannot silently switch projects.
+- [ ] The engineering controls are keyboard-operable at desktop and mobile widths.
+
+See `docs/M1_CHECKLIST.md` for the complete automated and live gate.
 
 ## Approval demonstration
 
@@ -139,11 +161,10 @@ Confirm responses contain:
 
 ## Intentional exclusions
 
-- TIA Portal and Siemens Openness integration
-- Fanqi bridge integration
-- MCP servers
-- Real PLC project access or engineering mutations
-- Compile, save, download, or online operations
+- PLC/HMI tag enumeration, source extraction, cross-references, and project indexing until M2
+- Engineering mutations or model-controlled TIA lifecycle operations
+- Compile, import, save, download, project close, or online operations
+- Unrestricted/raw MCP exposure to the browser or Pi
 - General shell, filesystem, browser, or internet tools
 - Multi-user authentication and cloud deployment
 - Playwright/browser automation

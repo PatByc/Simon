@@ -27,6 +27,10 @@ import {
 const SafeMarkdown = lazy(() =>
   import("./SafeMarkdown.js").then((module) => ({ default: module.SafeMarkdown })),
 );
+import { EngineeringContextPanel } from "./EngineeringContextPanel.js";
+import claudeLogo from "./assets/providers/claude.svg";
+import openAiLogo from "./assets/providers/openai.svg";
+import piLogo from "./assets/providers/pi.svg";
 import { useAssistantUi } from "./store.js";
 
 interface ActivityItem {
@@ -74,7 +78,18 @@ function transcriptToEntries(messages: Awaited<ReturnType<typeof getConversation
   return restored;
 }
 
-type IconName = "new" | "history" | "settings" | "pin" | "close" | "plus" | "shield" | "zap" | "send" | "stop" | "copy" | "check" | "retry" | "edit";
+type IconName = "new" | "history" | "settings" | "pin" | "close" | "plus" | "shield" | "auto" | "model" | "zap" | "send" | "stop" | "copy" | "check" | "retry" | "edit";
+
+type ProviderName = "openai" | "pi" | "claude";
+
+function ProviderIcon({ provider }: { provider: ProviderName }) {
+  const sources: Record<ProviderName, string> = {
+    openai: openAiLogo,
+    pi: piLogo,
+    claude: claudeLogo,
+  };
+  return <img className="provider-icon" src={sources[provider]} alt="" aria-hidden="true" />;
+}
 
 function ToolbarIcon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -85,6 +100,8 @@ function ToolbarIcon({ name }: { name: IconName }) {
     close: <><path d="M6 6l12 12M18 6 6 18" /></>,
     plus: <><path d="M12 5v14M5 12h14" /></>,
     shield: <><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></>,
+    auto: <><path d="M19.4 7.4A8 8 0 0 0 5 7l-1 3" /><path d="M4 5v5h5" /><path d="M4.6 16.6A8 8 0 0 0 19 17l1-3" /><path d="M20 19v-5h-5" /><path d="m10 8.5 5 3.5-5 3.5Z" /></>,
+    model: <><path d="m12 3 7.5 4.3v8.6L12 20l-7.5-4.1V7.3L12 3Z" /><circle cx="12" cy="12" r="2.4" /><path d="m12 9.6 4.2-2.4M9.9 13.2l-4.2 2.4M14.1 13.2l4.2 2.4" /></>,
     zap: <><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z" /></>,
     send: <><path d="M12 19V5M6 11l6-6 6 6" /></>,
     stop: <><rect x="7" y="7" width="10" height="10" rx="1" /></>,
@@ -122,6 +139,9 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
   const [searchResults, setSearchResults] = useState<ConversationSearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [modelPage, setModelPage] = useState<ProviderName>("openai");
+  const [modelSearch, setModelSearch] = useState("");
   const [usageOpen, setUsageOpen] = useState(false);
   const [usageStatus, setUsageStatus] = useState<UsageStatus | null>(null);
   const [connectionState, setConnectionState] = useState<RunConnectionState | null>(null);
@@ -130,6 +150,7 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const conversationScrollRef = useRef<HTMLDivElement>(null);
   const modeMenuRef = useRef<HTMLDivElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
   const usageRef = useRef<HTMLDivElement>(null);
   const conversationEndRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
@@ -142,13 +163,21 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
     { command: "/stop", description: "Stop the active response" },
     { command: "/model", description: "Show the active model" },
     { command: "/thinking", description: "Show the thinking level" },
-    { command: "/demo-search", description: "Search bundled synthetic engineering fixtures" },
+    ...(assistantStatus?.capabilities.externalAccess
+      ? []
+      : [{ command: "/demo-search", description: "Search bundled synthetic engineering fixtures" }]),
     { command: "/demo-review", description: "Create a synthetic review card" },
     { command: "/help", description: "Show available commands" },
   ];
   const matchingCommands = message.startsWith("/")
     ? commands.filter((item) => item.command.startsWith(message.split(/\s/, 1)[0] ?? ""))
     : [];
+  const activeRuntimeModel = runtimeOptions?.models.find((model) => `${model.provider}/${model.id}` === runtimeOptions.activeModel);
+  const activeModelLabel = activeRuntimeModel?.name ?? conversation?.selectedModel?.split("/").at(-1) ?? "OpenAI + Pi";
+  const openAiModels = runtimeOptions?.models.filter((model) => {
+    const haystack = `${model.provider} ${model.id} ${model.name}`.toLowerCase();
+    return !haystack.includes("claude") && !haystack.includes("anthropic") && haystack.includes(modelSearch.trim().toLowerCase());
+  }) ?? [];
 
   useEffect(() => () => stopWatching.current?.(), []);
 
@@ -182,6 +211,15 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
     document.addEventListener("mousedown", closeMenu);
     return () => document.removeEventListener("mousedown", closeMenu);
   }, [modeMenuOpen]);
+
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    const closeMenu = (event: MouseEvent) => {
+      if (!modelMenuRef.current?.contains(event.target as Node)) setModelMenuOpen(false);
+    };
+    document.addEventListener("mousedown", closeMenu);
+    return () => document.removeEventListener("mousedown", closeMenu);
+  }, [modelMenuOpen]);
 
   useEffect(() => {
     localStorage.setItem("simon-sidebar-collapsed", String(sidebarCollapsed));
@@ -465,6 +503,25 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
     }
   };
 
+  const toggleModelMenu = async () => {
+    if (modelMenuOpen) {
+      setModelMenuOpen(false);
+      return;
+    }
+    setError(null);
+    setModelPage("openai");
+    setModelMenuOpen(true);
+    if (runtimeOptions) return;
+    try {
+      const activeConversation = conversation ?? (await createConversation(approvalMode));
+      setConversation(activeConversation);
+      setRuntimeOptions(await getRuntimeOptions(activeConversation.conversationId));
+    } catch (runtimeError) {
+      setModelMenuOpen(false);
+      setError(runtimeError instanceof Error ? runtimeError.message : "Unable to load models");
+    }
+  };
+
   const startNewConversation = () => {
     stopWatching.current?.();
     setConversation(null);
@@ -475,6 +532,8 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
     setError(null);
     setHistoryOpen(false);
     setSettingsOpen(false);
+    setModelMenuOpen(false);
+    setModelSearch("");
     setRuntimeOptions(null);
     setBranches([]);
     setEditingEntryIndex(null);
@@ -879,7 +938,7 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
               {isRunning
                 ? "Working"
                 : assistantStatus?.available
-                  ? `${assistantStatus.runtime} ready · ${assistantStatus.modelCount} models`
+                  ? `${assistantStatus.runtime} ready · ${assistantStatus.modelCount} models${conversation?.projectBinding ? ` · ${conversation.projectBinding.projectName}` : ""}`
                   : assistantStatus
                     ? "Assistant unavailable"
                     : "Checking assistant"}
@@ -947,48 +1006,28 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
           {settingsOpen ? (
             <section className="runtime-settings" aria-label="Runtime settings">
               <div className="history-heading">
-                <div><p className="eyebrow">Pi runtime</p><h2>Model settings</h2></div>
+                <div><p className="eyebrow">Simon controls</p><h2>Workspace settings</h2></div>
                 <button type="button" onClick={() => setSettingsOpen(false)}>Back</button>
               </div>
               {runtimeOptions ? (
                 <div className="settings-fields">
-                  <label>
-                    <span>Model</span>
-                    <select
-                      value={runtimeOptions.activeModel ?? ""}
-                      onChange={(event) => {
-                        const selected = runtimeOptions.models.find((model) => `${model.provider}/${model.id}` === event.target.value);
-                        if (selected) void changeRuntime({ model: { provider: selected.provider, id: selected.id } });
-                      }}
-                    >
-                      {runtimeOptions.models.map((model) => (
-                        <option key={`${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>
-                          {model.name} · {model.provider}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Thinking level</span>
-                    <select
-                      value={runtimeOptions.thinkingLevel ?? "off"}
-                      onChange={(event) => void changeRuntime({ thinkingLevel: event.target.value })}
-                    >
-                      {runtimeOptions.thinkingLevels.map((level) => <option key={level} value={level}>{level}</option>)}
-                    </select>
-                  </label>
                   {assistantStatus && (
                     <div className="capability-card">
                       <strong>Active capability boundary</strong>
                       <p>{assistantStatus.capabilities.scope}</p>
                       <dl>
-                        <div><dt>Allowed tools</dt><dd>{assistantStatus.capabilities.tools.length > 0 ? assistantStatus.capabilities.tools.join(", ") : "None"}</dd></div>
-                        <div><dt>External access</dt><dd>{assistantStatus.capabilities.externalAccess ? "Enabled" : "Disabled"}</dd></div>
+                        <div><dt>Allowed tools</dt><dd>{assistantStatus.capabilities.tools.length > 0 ? `${assistantStatus.capabilities.tools.length} explicitly allowlisted` : "None"}</dd></div>
+                        <div><dt>External access</dt><dd>{assistantStatus.capabilities.externalAccess ? "TIA read only" : "Disabled"}</dd></div>
                         <div><dt>Mutations</dt><dd>{assistantStatus.capabilities.mutations ? "Enabled" : "Disabled"}</dd></div>
                       </dl>
                     </div>
                   )}
-                  <p>Shell, filesystem, MCP, internet, and TIA access remain disabled.</p>
+                  {conversation && (
+                    <EngineeringContextPanel
+                      conversation={conversation}
+                      onBindingChange={(binding) => setConversation((current) => current ? { ...current, projectBinding: binding } : current)}
+                    />
+                  )}
                 </div>
               ) : <p>Loading runtime settings…</p>}
             </section>
@@ -1026,11 +1065,13 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
               <div className="empty-sigil" aria-hidden="true"><span>S</span></div>
               <p className="eyebrow">Private engineering intelligence</p>
               <h2>What are we solving?</h2>
-              <p className="empty-lead">Think through controls, review logic, or explore Simon's synthetic engineering examples.</p>
+              <p className="empty-lead">{assistantStatus?.capabilities.externalAccess
+                ? "Connect an explicit TIA target, inspect the bounded project inventory, or reason through an engineering question."
+                : "Think through controls, review logic, or explore Simon's synthetic engineering examples."}</p>
               <div className="starter-prompts" aria-label="Suggested prompts">
                 {([
                   ["Reason", "Explain a control strategy clearly"],
-                  ["Inspect", "Search the pump restart example"],
+                  ["Inspect", assistantStatus?.capabilities.externalAccess ? "Which TIA project is connected?" : "Search the pump restart example"],
                   ["Draft", "Structure a safe implementation plan"],
                 ] as const).map(([label, prompt]) => (
                   <button key={label} type="button" onClick={() => { setMessage(prompt); inputRef.current?.focus(); }}>
@@ -1217,7 +1258,7 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
                 aria-expanded={modeMenuOpen}
                 title={approvalMode === "auto" ? "Auto execution" : "Manual approval"}
               >
-                <ToolbarIcon name={approvalMode === "auto" ? "zap" : "shield"} />
+                <ToolbarIcon name={approvalMode === "auto" ? "auto" : "shield"} />
               </button>
               {modeMenuOpen && (
                 <div className="ask-mode-menu" role="menu" aria-label="Execution mode">
@@ -1239,7 +1280,7 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
                     aria-checked={approvalMode === "auto"}
                     onClick={() => { void changeApprovalMode("auto"); setModeMenuOpen(false); inputRef.current?.focus(); }}
                   >
-                    <ToolbarIcon name="zap" />
+                    <ToolbarIcon name="auto" />
                     <span><strong>Auto execute</strong><small>Safe local and demo actions only</small></span>
                     {approvalMode === "auto" && <ToolbarIcon name="check" />}
                   </button>
@@ -1257,6 +1298,102 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
               rows={1}
               disabled={isRunning || assistantStatus?.available === false}
             />
+            <div className="model-picker" ref={modelMenuRef}>
+              <button
+                type="button"
+                className={`model-trigger${modelMenuOpen ? " is-open" : ""}`}
+                onClick={() => void toggleModelMenu()}
+                disabled={isRunning}
+                aria-label={`Model: ${activeModelLabel}`}
+                aria-haspopup="dialog"
+                aria-expanded={modelMenuOpen}
+                title="Choose model"
+              >
+                <span className="model-trigger-mark"><ProviderIcon provider="openai" /></span>
+                <span className="model-trigger-copy"><strong>{activeModelLabel}</strong><small>{runtimeOptions?.thinkingLevel ?? conversation?.thinkingLevel ?? "Pi default"}</small></span>
+                <span className="model-trigger-chevron" aria-hidden="true">⌃</span>
+              </button>
+              {modelMenuOpen && (
+                <div className="model-menu" role="dialog" aria-label="Model and runtime selector">
+                  <div className="model-menu-head">
+                    <div><span>Intelligence routing</span><strong>Select a model</strong><p>Models run through Simon's local Pi host.</p></div>
+                    <i><span />HOST READY</i>
+                  </div>
+                  <div className="model-tabs" role="tablist" aria-label="Model providers">
+                    <button type="button" role="tab" aria-selected={modelPage === "openai"} onClick={() => setModelPage("openai")}>
+                      <span className="provider-mark openai-mark"><ProviderIcon provider="openai" /></span>
+                      <span className="provider-copy"><strong>OpenAI</strong><small>Models</small></span>
+                    </button>
+                    <button type="button" role="tab" aria-selected={modelPage === "pi"} onClick={() => setModelPage("pi")}>
+                      <span className="provider-mark pi-mark"><ProviderIcon provider="pi" /></span>
+                      <span className="provider-copy"><strong>Pi</strong><small>Runtime</small></span>
+                    </button>
+                    <button type="button" role="tab" aria-selected={modelPage === "claude"} onClick={() => setModelPage("claude")}>
+                      <span className="provider-mark claude-mark"><ProviderIcon provider="claude" /></span>
+                      <span className="provider-copy"><strong>Claude</strong><small>Preview</small></span>
+                    </button>
+                  </div>
+                  {modelPage === "openai" ? (
+                    <div className="model-page" role="tabpanel">
+                      <label className="model-search">
+                        <span className="sr-only">Search models</span>
+                        <ToolbarIcon name="model" />
+                        <input value={modelSearch} onChange={(event) => setModelSearch(event.target.value)} placeholder="Search OpenAI models" autoFocus />
+                      </label>
+                      <div className="model-list" role="radiogroup" aria-label="Available OpenAI models">
+                        {!runtimeOptions && <p>Loading Pi runtime…</p>}
+                        {runtimeOptions && openAiModels.length === 0 && <p>No matching OpenAI models.</p>}
+                        {openAiModels.map((model) => {
+                          const modelKey = `${model.provider}/${model.id}`;
+                          const selected = runtimeOptions?.activeModel === modelKey;
+                          return (
+                            <button
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              className={selected ? "is-selected" : ""}
+                              key={modelKey}
+                              onClick={() => void changeRuntime({ model: { provider: model.provider, id: model.id } })}
+                            >
+                              <span className="model-row-mark"><ProviderIcon provider="openai" /></span>
+                              <span className="model-row-copy"><strong>{model.name}</strong><small>{model.provider}</small></span>
+                              <i>{model.reasoning ? "Reasoning" : "Chat"}</i>
+                              {selected && <ToolbarIcon name="check" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : modelPage === "pi" ? (
+                    <div className="pi-runtime-page" role="tabpanel">
+                      <div className="pi-runtime-hero">
+                        <span className="pi-runtime-mark"><ProviderIcon provider="pi" /></span>
+                        <div><span>Local orchestration</span><strong>Pi coding runtime</strong><p>Owns model routing, conversation state, and Simon's allowlisted tools.</p></div>
+                        <i>ACTIVE</i>
+                      </div>
+                      <dl className="pi-runtime-facts">
+                        <div><dt>Current model</dt><dd>{activeRuntimeModel?.name ?? activeModelLabel}</dd></div>
+                        <div><dt>Host boundary</dt><dd>Server-side</dd></div>
+                      </dl>
+                      {runtimeOptions && runtimeOptions.thinkingLevels.length > 0 && (
+                        <label className="thinking-control">
+                          <span><strong>Thinking level</strong><small>Reasoning effort for this conversation</small></span>
+                          <select value={runtimeOptions.thinkingLevel ?? "off"} onChange={(event) => void changeRuntime({ thinkingLevel: event.target.value })}>
+                            {runtimeOptions.thinkingLevels.map((level) => <option key={level} value={level}>{level}</option>)}
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="claude-preview" role="tabpanel">
+                      <span className="claude-preview-mark"><ProviderIcon provider="claude" /></span>
+                      <div><strong>Claude runtime</strong><p>Provider page reserved. Authentication and model routing are not connected yet.</p></div>
+                      <small>COMING LATER</small>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             {isRunning ? (
               <button type="button" className="ask-send" onClick={stop} aria-label="Stop response" title="Stop response"><ToolbarIcon name="stop" /></button>
             ) : (

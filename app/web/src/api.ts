@@ -6,6 +6,12 @@ import {
   conversationMessagesSchema,
   conversationSchema,
   createRunResponseSchema,
+  engineeringCapabilitiesSchema,
+  engineeringDiagnosticsSchema,
+  engineeringInventorySchema,
+  engineeringProcessListSchema,
+  engineeringStatusSchema,
+  projectBindingSchema,
   knowledgeSearchResponseSchema,
   proposalSchema,
   runtimeOptionsSchema,
@@ -16,7 +22,13 @@ import {
   type Conversation,
   type ConversationBranch,
   type ConversationSearchResult,
+  type EngineeringCapabilities,
+  type EngineeringDiagnostics,
+  type EngineeringInventory,
+  type EngineeringStatus,
   type KnowledgeSearchResponse,
+  type ProjectBinding,
+  type TiaProcess,
   type Proposal,
   type RuntimeOptions,
   type UsageStatus,
@@ -46,6 +58,49 @@ export async function getUsageStatus(): Promise<UsageStatus> {
 export async function getAssistantStatus(): Promise<AssistantStatus> {
   const response = await fetch("/api/v1/status");
   return assistantStatusSchema.parse(await parseJson(response));
+}
+
+export async function getEngineeringStatus(conversationId?: string): Promise<EngineeringStatus> {
+  const query = conversationId ? `?conversationId=${encodeURIComponent(conversationId)}` : "";
+  const response = await fetch(`/api/v1/engineering/status${query}`);
+  return engineeringStatusSchema.parse(await parseJson(response));
+}
+
+export async function listEngineeringProcesses(): Promise<TiaProcess[]> {
+  const response = await fetch("/api/v1/engineering/processes");
+  return engineeringProcessListSchema.parse(await parseJson(response)).processes;
+}
+
+export async function attachEngineeringProcess(
+  conversationId: string,
+  target: { processId: number; processStartTime: string },
+): Promise<ProjectBinding> {
+  const response = await fetch(`/api/v1/conversations/${conversationId}/engineering-binding`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(target),
+  });
+  return projectBindingSchema.parse(await parseJson(response));
+}
+
+export async function detachEngineeringProcess(): Promise<void> {
+  const response = await fetch("/api/v1/engineering/connection", { method: "DELETE" });
+  if (!response.ok) await parseJson(response);
+}
+
+export async function getEngineeringCapabilities(): Promise<EngineeringCapabilities> {
+  const response = await fetch("/api/v1/engineering/capabilities");
+  return engineeringCapabilitiesSchema.parse(await parseJson(response));
+}
+
+export async function getEngineeringDiagnostics(): Promise<EngineeringDiagnostics> {
+  const response = await fetch("/api/v1/engineering/diagnostics");
+  return engineeringDiagnosticsSchema.parse(await parseJson(response));
+}
+
+export async function getEngineeringInventory(conversationId: string): Promise<EngineeringInventory> {
+  const response = await fetch(`/api/v1/conversations/${conversationId}/engineering-inventory`);
+  return engineeringInventorySchema.parse(await parseJson(response));
 }
 
 export async function searchConversations(query: string): Promise<ConversationSearchResult[]> {

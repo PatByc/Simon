@@ -1,6 +1,6 @@
 # Simon MCP implementation progress
 
-Updated: 2026-11-08
+Updated: 2026-11-09
 
 ## Safety preflight
 
@@ -61,13 +61,17 @@ Updated: 2026-11-08
 - [x] 48. `README.md` documents the incorporated architecture and exact live evidence.
 - [x] 49. The expansion checklist was applied to host-only process discovery and selected-process attachment.
 - [x] 50. A direct unclassified `SaveProject` call was rejected by the Simon MCP façade.
+- [x] 51. Application-owned process discovery and explicit attachment endpoints were added; lifecycle tools remain hidden from Pi.
+- [x] 52. Process identity now includes the stable Windows process start time rather than relying on Siemens discovery acquisition time.
+- [x] 53. Conversation-scoped project bindings and connection epochs guard every Pi engineering tool call.
+- [x] 54. Bounded inventory, capability coverage, diagnostics, safe detach, and reconnect-required restart behavior were application-live-qualified.
 
 ## Last automated verification
 
 - MCP TypeScript tests: 17 passed.
 - Incorporated worker tests: 2 passed.
-- Server tests: 24 passed.
-- Web tests: 14 passed.
+- Server tests: 34 passed.
+- Web tests: 15 passed.
 - Contract tests: 9 passed.
 - Full workspace typecheck: passed.
 - Production build: passed.

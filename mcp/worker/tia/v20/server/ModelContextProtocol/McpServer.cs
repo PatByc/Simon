@@ -93,11 +93,14 @@ namespace TiaMcpServer.ModelContextProtocol
                 {
                     var hasProject = false;
                     try { hasProject = process.ProjectPath != null; } catch { }
+                    DateTime? processStartTime = null;
+                    try { processStartTime = System.Diagnostics.Process.GetProcessById(process.Id).StartTime; } catch { }
                     return new ResponsePortalProcessInfo
                     {
                         Id = process.Id,
                         HasProject = hasProject,
-                        AcquisitionTime = process.AcquisitionTime
+                        AcquisitionTime = process.AcquisitionTime,
+                        ProcessStartTime = processStartTime
                     };
                 })
                 .ToList();

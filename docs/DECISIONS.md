@@ -70,4 +70,14 @@ This log records durable project decisions. Concise summaries also appear in `re
 
 **Alternatives considered:** Duplicate allowlists in runtime setup and status responses; rely only on documentation.
 
-**Consequences:** Any future tool requires an explicit policy and regression-test change. Built-in, MCP, browser, filesystem, and TIA tools remain excluded.
+**Consequences:** Any future tool requires an explicit policy and regression-test change. Built-in shell, browser, arbitrary filesystem, and generic MCP tools remain excluded. The later M1 amendment permits only explicitly classified read-only TIA tools through Simon's application-owned adapter.
+
+## Explicit conversation-scoped TIA binding — 2026-11-09
+
+**Context:** M1 requires real read-only TIA results without allowing the model or browser to select a process, silently inherit a target, or reuse stale context after a restart or project change.
+
+**Decision:** Keep TIA lifecycle operations host-controlled. The browser may request discovery and explicit attachment through Simon HTTP endpoints, but only the backend invokes MCP lifecycle tools. Bind each engineering conversation to an opaque project binding containing a stable Windows process-start identity, project identity hash, and connection epoch. Pi tools verify that binding before every read. Ordinary startup and restart never auto-attach.
+
+**Alternatives considered:** Automatically choose the first process with an open project; expose lifecycle tools to Pi; use process ID alone; keep one mutable project target shared by all conversations.
+
+**Consequences:** Selecting another target requires a new conversation or explicit safe reconciliation. Restarts require reconnection. Stale bindings fail closed. Simon can detach without closing TIA Portal, while compile, save, import, mutations, shell, filesystem, and online PLC operations remain blocked.

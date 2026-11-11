@@ -1,35 +1,47 @@
 # Simon Roadmap
 
-## Now — Chat and Pi foundation
+## Completed — Chat, Pi, and M1 attachment foundation
 
-1. Workspace and project catalogue.
-2. Shared contracts and fake streaming adapter.
-3. Global responsive chat drawer.
-4. Restricted Pi SDK integration.
-5. Conversation persistence and recovery semantics.
-6. Commands, model controls, and activity trace.
-7. Synthetic Manual/Auto proposal workflow.
-8. Accessibility, privacy, packaging, and local release hardening.
+- Full-window React chat and Fastify/SSE backend.
+- Persistent Pi conversations, branches, recovery, model controls, and activity traces.
+- Synthetic knowledge and proposal demonstrations.
+- Simon-owned engineering MCP package and incorporated TIA Portal V20 worker.
+- Explicit read-only TIA process discovery and selection.
+- Conversation-scoped project bindings with process-start identity and binding epochs.
+- Bounded project inventory, capability reporting, diagnostics, and guarded Pi tools.
+- Application-level live qualification of attach, project inventory, Pi read, detach, and reconnect-required restart behavior.
 
-## Next — Read-only Simon domain boundary
+Manual browser qualification remains tracked in `docs/MANUAL_QA.md` and `docs/M1_CHECKLIST.md`.
 
-- Introduce a narrow Simon tool service using synthetic fixtures.
-- Add source/reference cards and read-only review surfaces.
-- Keep domain tools independent of Pi and the browser.
-- Prove policy, event, and proposal contracts before external integration.
+## Now — M2 source extraction and retrieval
 
-## Later — TIA research and controlled integration
+- Qualify representative block, type, interface, tag, reference, and hardware reads.
+- Add explicit PLC tag-table/tag enumeration and counting.
+- Build project snapshots with binding, freshness, coverage, and provenance.
+- Add exact and lexical project retrieval with source-linked answers.
+- Add bounded SCL and supported FBD/LAD reading without enabling writes.
+- Investigate incomplete nested hardware visibility and report unsupported coverage.
 
-- Capture the exact TIA V20 and Fanqi baseline.
-- Implement environment inspection and explicit project binding.
-- Add qualified read-only project access.
-- Establish representation, freshness, round-trip, recovery, and approval evidence before writes.
+## Next — Documentation and conventions
 
-## Future — Engineering changes and customization
+- Discover version-correct Siemens documentation sources.
+- Add sourced instruction retrieval.
+- Infer project conventions from authorized examples and require approval.
+- Keep documented, inferred, and approved guidance distinct.
 
-- One qualified reviewed SCL change on a disposable project.
-- Qualified graphical edit classes.
-- Isolated local UI customization.
-- Optional sanitized upstream contributions.
+## Later — Controlled engineering changes
 
-No later phase is authorized merely by completing the chat application. Each boundary requires its own decision and acceptance evidence.
+- No-change export/import round trips on a disposable project.
+- Recovery evidence for transaction and post-commit compile failures.
+- One exact reviewed non-safety SCL change.
+- Durable operation journal and restart reconciliation.
+- Qualified graphical edit classes only after preservation tests.
+
+## Future — Bounded customization
+
+- Reversible local configuration changes.
+- Small read-only panels.
+- Isolated executable customization only after separate security gates.
+- Optional reviewed and sanitized upstream contributions.
+
+No later phase is authorized merely by completing M1. Writes remain disabled until M4 evidence and the independent approval design are complete.

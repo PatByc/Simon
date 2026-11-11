@@ -101,6 +101,7 @@ namespace TiaMcpServer.ModelContextProtocol
         public int Id { get; set; }
         public bool HasProject { get; set; }
         public DateTime AcquisitionTime { get; set; }
+        public DateTime? ProcessStartTime { get; set; }
     }
 
     public class ResponseConnect : ResponseMessage

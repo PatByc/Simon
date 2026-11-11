@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryStore } from "./store.js";
 
@@ -32,6 +33,59 @@ describe("persistent conversation store", () => {
     });
     expect(second.getSessionPath(conversation.conversationId)).toBe(join(directory, "session.jsonl"));
     second.close();
+  });
+
+  it("persists and restores an immutable engineering project binding", () => {
+    const directory = mkdtempSync(join(tmpdir(), "simon-store-"));
+    temporaryDirectories.push(directory);
+    const databasePath = join(directory, "simon.sqlite");
+    const binding = {
+      bindingId: "d07f4af7-95a5-467c-89f5-ded7bc703b62",
+      epoch: "5df7d2e5-1c72-4aaf-b98a-cf8525538950",
+      processId: 42,
+      processStartTime: "2026-11-09T09:00:00.000Z",
+      projectName: "Plant",
+      projectPathHash: "a".repeat(64),
+      observedAt: "2026-11-09T10:00:00.000Z",
+    };
+
+    const first = new InMemoryStore(databasePath);
+    const conversation = first.createConversation({ title: "Bound", approvalMode: "manual" });
+    first.updateConversation(conversation.conversationId, { projectBinding: binding });
+    first.close();
+
+    const second = new InMemoryStore(databasePath);
+    expect(second.conversations.get(conversation.conversationId)?.projectBinding).toEqual(binding);
+    second.close();
+  });
+
+  it("migrates an existing conversation table without a project-binding column", () => {
+    const directory = mkdtempSync(join(tmpdir(), "simon-store-"));
+    temporaryDirectories.push(directory);
+    const databasePath = join(directory, "simon.sqlite");
+    const database = new DatabaseSync(databasePath);
+    database.exec(`
+      CREATE TABLE conversations (
+        conversation_id TEXT PRIMARY KEY,
+        pi_session_id TEXT,
+        pi_session_path TEXT,
+        title TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        selected_model TEXT,
+        thinking_level TEXT,
+        approval_mode TEXT NOT NULL,
+        status TEXT NOT NULL
+      );
+    `);
+    database.close();
+
+    const store = new InMemoryStore(databasePath);
+    store.close();
+    const inspection = new DatabaseSync(databasePath);
+    const columns = inspection.prepare("PRAGMA table_info(conversations)").all() as unknown as Array<{ name: string }>;
+    expect(columns.some((column) => column.name === "project_binding_json")).toBe(true);
+    inspection.close();
   });
 
   it("deletes the persisted Pi transcript with conversation metadata", () => {

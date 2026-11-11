@@ -3,6 +3,9 @@ param(
     [ValidateSet("pi", "fake")]
     [string]$Runtime = "pi",
 
+    [ValidateSet("synthetic", "tia-readonly")]
+    [string]$EngineeringMode = "synthetic",
+
     [int]$Port = 4310,
 
     [switch]$SkipBuild,
@@ -33,6 +36,7 @@ if (-not $SkipBuild) {
 }
 
 $env:SIMON_RUNTIME = $Runtime
+$env:SIMON_ENGINEERING_MODE = $EngineeringMode
 $env:SIMON_PORT = "$Port"
 $env:SIMON_HOST = "127.0.0.1"
 $env:SIMON_DATA_DIR = "$Root/data"
@@ -49,6 +53,7 @@ if (-not $NoBrowser) {
 
 Write-Host "Starting Simon at $url" -ForegroundColor Green
 Write-Host "Runtime: $Runtime" -ForegroundColor DarkGray
+Write-Host "Engineering mode: $EngineeringMode" -ForegroundColor DarkGray
 Write-Host "Press Ctrl+C to stop." -ForegroundColor DarkGray
 
 & npm run start --workspace @simon/server
