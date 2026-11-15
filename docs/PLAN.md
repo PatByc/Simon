@@ -456,4 +456,4 @@ Installed-help initialization is deterministic and idempotent. Unchanged warm so
 
 Retrieval is gated by a 38-case synthetic/installed benchmark with exact/safety/citation gates at 100% and lexical expected-top-five at 87.5%. A measured SQLite BM25 ordering defect was fixed; embeddings remain deferred because the approved threshold passes. Consolidated browser, live Pi, TIA, responsive, accessibility, security, and privacy qualification resolved six medium findings and accepted one visible low large-project timeout limitation. See `docs/M3_1_LIVE_QUALIFICATION.md`, `docs/M3_1_RETRIEVAL_BENCHMARK.md`, and `docs/M3_1_PRODUCT_ACCEPTANCE.md`.
 
-M3.1 does not authorize M4. Desktop packaging versus disposable-project write research requires a separate recorded decision.
+M3.1 does not authorize M4. The separate post-M3.1 decision selects desktop packaging as the next planning track while preserving the frozen read-only authority boundary; M4 write research remains unauthorized.

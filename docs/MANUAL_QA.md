@@ -4,7 +4,7 @@ Automated browser E2E testing is intentionally deferred. Complete this checklist
 
 ## M3.1 release-candidate checkpoint — 2026-11-15
 
-The consolidated M3.1 gate in `docs/M3_1_LIVE_QUALIFICATION.md` and `docs/M3_1_PRODUCT_ACCEPTANCE.md` repeated synthetic, live M1/M2/M3, convention, combined-authority, responsive, scaling, accessibility, security, privacy, startup, and retrieval checks. Six medium findings were fixed and regression-tested; one low large-project timeout remains explicitly partial. Required widths and 100/125/150% scale equivalents passed with no horizontal overflow. Electron packaging remains deferred and M4 remains unauthorized.
+The consolidated M3.1 gate in `docs/M3_1_LIVE_QUALIFICATION.md` and `docs/M3_1_PRODUCT_ACCEPTANCE.md` repeated synthetic, live M1/M2/M3, convention, combined-authority, responsive, scaling, accessibility, security, privacy, startup, and retrieval checks. Six medium findings were fixed and regression-tested; one low large-project timeout remains explicitly partial. Required widths and 100/125/150% scale equivalents passed with no horizontal overflow. Desktop packaging is the selected next planning track but is not yet implemented; M4 remains unauthorized.
 
 ## Localhost acceptance checkpoint — 2026-11-11
 

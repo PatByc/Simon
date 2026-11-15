@@ -59,4 +59,4 @@ M3.1 is complete only when every applicable item below is checked with durable s
 - [x] `docs/M3_1_PRODUCT_ACCEPTANCE.md` records the final environment, evidence, limitations, and Electron deferral.
 - [x] No unresolved high/medium finding remains.
 - [x] The completed M3.1 baseline is committed and pushed only after all gates pass.
-- [ ] Packaging versus M4 is decided separately; M3.1 does not authorize writes.
+- [x] Packaging versus M4 is decided separately; M3.1 does not authorize writes.

@@ -40,10 +40,11 @@ Manual browser qualification and localhost product acceptance are recorded in `d
 - Repeated synthetic, live M1/M2/M3, combined-authority, responsive, accessibility, security, and privacy qualification.
 - Resolved every demonstrated high/medium issue; retained one explicit low large-project timeout limitation.
 
-## Next decision — packaging or M4 research plan
+## Next — desktop packaging plan
 
-- Desktop packaging remains optional; the accepted product is the loopback production application.
-- M4 remains unauthorized until a separate disposable-project write-research plan and approval boundary are recorded.
+- Package the frozen read-only M3.1 baseline without changing its loopback browser/backend/Pi authority boundary.
+- Write and approve a separate executable packaging plan before implementation; packaging itself grants no engineering authority.
+- Keep M4 write research unauthorized until packaging acceptance completes or the project owner explicitly records a new priority and safety decision.
 - Official-online ingestion remains blocked until separately verified rights permit it.
 
 ## Later — Controlled engineering changes

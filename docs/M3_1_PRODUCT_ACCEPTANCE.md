@@ -97,4 +97,8 @@ The final host check found TIA Portal responsive with the same project window. T
 
 ## Decision
 
-M3.1 meets its release-candidate exit conditions and is frozen only after the final checklist/diff review passed. This acceptance does not authorize M4 writes. Desktop packaging versus a new disposable-project M4 research plan remains the separate Step 56 decision.
+M3.1 meets its release-candidate exit conditions and is frozen only after the final checklist/diff review passed. This acceptance does not authorize M4 writes.
+
+## Post-M3.1 sequence decision
+
+Step 56 selects desktop packaging as the next planning track. Packaging must preserve the accepted read-only authority boundary and receive its own executable plan and acceptance gate. M4 disposable-project write research remains unauthorized.

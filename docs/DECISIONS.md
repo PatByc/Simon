@@ -123,3 +123,13 @@ Represent project guidance as immutable convention revisions. Evidence may be ob
 **Alternatives considered:** Reindex every startup; delete the old source before parsing; serve zero topics after any refresh failure; add embeddings or a separate search service during stabilization.
 
 **Consequences:** Warm startup is deterministic and immediately searchable, failed refreshes preserve explicit last-known-good evidence, source status remains truthful, and generated databases stay Simon-owned and ignored. Clean ingestion runs outside the listener path in a local worker. Embeddings remain deferred until the retrieval benchmark demonstrates a material need.
+
+## Package the read-only baseline before M4 research — 2026-11-15
+
+**Context:** M3.1 froze a qualified loopback read-only product. The next track could either package that known boundary as a desktop application or begin higher-risk disposable-project research toward writes.
+
+**Decision:** Select desktop packaging as the next planning track. Preserve the accepted loopback/browser-backend/Pi authority architecture inside the package and require a separate executable packaging plan before implementation. Do not begin M4 write experiments, add write tools, or treat packaging as authority expansion.
+
+**Alternatives considered:** Begin a disposable-project M4 research plan immediately; pursue packaging and M4 in parallel; leave both tracks indefinitely undecided.
+
+**Consequences:** M3.1 remains frozen at `8376401`. Electron packaging is no longer an undecided future option, but it is not implemented by this decision. M4 remains unauthorized until packaging acceptance is complete or the project owner explicitly records a new priority and safety decision.

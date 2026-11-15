@@ -87,3 +87,10 @@
 **Reason:** Startup and refresh failures must not erase valid local engineering evidence, and unchanged warm startup should not pay full normalization/replacement cost.
 **Trade-offs:** The UI may intentionally serve older evidence with an explicit stale label while a source is unhealthy. Clean indexing remains asynchronous, and embeddings stay deferred behind the measured retrieval gate.
 **Date:** 2026-11-15
+
+## ADR-012: Package the read-only baseline before M4 research
+
+**Decision:** Make desktop packaging the next planning track while preserving the accepted loopback/browser-backend/Pi authority boundary; do not begin M4 write research.
+**Reason:** Packaging productizes the already-qualified read-only system without introducing the substantially higher safety and validation risk of engineering writes.
+**Trade-offs:** Write research is delayed, and packaging still requires its own executable plan and acceptance gate. The decision selects sequence only; it adds no tool or engineering authority.
+**Date:** 2026-11-15
