@@ -27,6 +27,7 @@ import {
 const SafeMarkdown = lazy(() =>
   import("./SafeMarkdown.js").then((module) => ({ default: module.SafeMarkdown })),
 );
+import { ConventionEvidencePanel } from "./ConventionEvidencePanel.js";
 import { DocumentationEvidencePanel } from "./DocumentationEvidencePanel.js";
 import { EngineeringContextPanel } from "./EngineeringContextPanel.js";
 import claudeLogo from "./assets/providers/claude.svg";
@@ -1041,6 +1042,7 @@ export function AskDrawer({ standalone = false }: { standalone?: boolean }) {
                     />
                   )}
                   <DocumentationEvidencePanel />
+                  <ConventionEvidencePanel />
                 </div>
               ) : <p>Loading runtime settings…</p>}
             </section>

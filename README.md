@@ -21,7 +21,7 @@ The current application provides:
 - an optional `tia-readonly` mode with explicit process selection, conversation-scoped project binding, bounded inventory, diagnostics, 20 direct TIA reads, and three application-owned snapshot retrieval tools;
 - bounded immutable engineering snapshots with persisted freshness, exact and lexical retrieval, references, citations, and explicit partial coverage;
 - local-only installed V20 help ingestion with deterministic normalization, applicability-first exact/FTS5 retrieval, stable citations, and a rights-blocked online source record;
-- host-controlled convention inference, approval, immutable revision history, retirement, and approved-only Pi retrieval;
+- a read-only convention evidence panel plus separate host-CLI inference, approval, immutable revision history, retirement, and approved-only Pi retrieval;
 - 27 explicitly classified read tools in `tia-readonly` mode, with ingestion, approval, lifecycle, mutation, shell, and arbitrary filesystem/network operations withheld from Pi;
 - truthful runtime activity, capability and coverage disclosure, and sanitized 5h/7d Codex usage.
 
@@ -39,7 +39,7 @@ docs/                 Handoffs, plan, roadmap, and decisions
 
 ## Development status
 
-The chat foundation, M1 read-only attachment, M2 source extraction/retrieval, localhost product acceptance, and M3 documentation/approved-convention implementation are complete. Simon has been live-qualified against the user-opened TIA V20 project and the installed STEP 7 V20 Update 7 help. Exact and lexical documentation retrieval, applicability disclosure, rights blocking, grounded Pi answers, convention rejection/approval/revision/retirement, and restart persistence are recorded in [`docs/M3_LIVE_QUALIFICATION.md`](docs/M3_LIVE_QUALIFICATION.md). Broader manual release regression remains in [`docs/MANUAL_QA.md`](docs/MANUAL_QA.md); Electron packaging remains deferred.
+The chat foundation and read-only M1–M3 milestones are frozen. M3.1 stabilization is release-qualified: browser-reachable convention mutation is removed, convention evidence is read-only, startup/indexing preserves last-known-good evidence, retrieval is benchmarked, and consolidated live/browser/security acceptance has no open high or medium finding. See [`docs/M3_1_LIVE_QUALIFICATION.md`](docs/M3_1_LIVE_QUALIFICATION.md), [`docs/M3_1_RETRIEVAL_BENCHMARK.md`](docs/M3_1_RETRIEVAL_BENCHMARK.md), and [`docs/M3_1_PRODUCT_ACCEPTANCE.md`](docs/M3_1_PRODUCT_ACCEPTANCE.md). Electron packaging and M4 write research remain separately deferred decisions.
 
 ## Commands
 
@@ -49,8 +49,11 @@ npm run dev       # Fastify on 4310 and Vite on 4311
 npm run typecheck
 npm test
 npm run build
-npm run doctor    # Redacted runtime/engineering diagnostics; set SIMON_ENGINEERING_MODE as needed
-npm start         # Build and serve the production app on 127.0.0.1:4310
+npm run doctor                    # Redacted runtime/engineering diagnostics
+npm run qualify:m3.1-startup      # Isolated startup/index release gate
+npm run qualify:m3.1-retrieval    # 38-case retrieval release gate
+npm run conventions --workspace @simon/server -- status
+npm start                         # Build and serve on 127.0.0.1:4310
 ```
 
 Set `SIMON_RUNTIME=fake` for deterministic UI development without calling a model. The default is the restricted real Pi runtime.
@@ -80,6 +83,6 @@ Useful options:
 
 ## Privacy and safety
 
-Simon is local-first. Provider credentials remain server-side in Pi's supported configuration. The local API binds to loopback by default. TIA attachment is explicit and read-only; disconnecting Simon does not close TIA Portal. Never commit credentials, sessions, proprietary project data, Siemens files, or customer source.
+Simon is local-first. Provider credentials and internal Pi session identifiers remain server-side. The local API binds to loopback by default and API responses are non-cacheable. TIA attachment is explicit and read-only; disconnecting Simon does not close TIA Portal. Never commit credentials, sessions, proprietary project data, Siemens files, or customer source.
 
 Simon is independent and is not affiliated with or endorsed by Siemens.

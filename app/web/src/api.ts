@@ -5,6 +5,8 @@ import {
   conversationSearchResponseSchema,
   conversationMessagesSchema,
   conversationSchema,
+  conventionHistoryResponseSchema,
+  conventionReadStatusResponseSchema,
   createRunResponseSchema,
   documentationSearchResponseSchema,
   documentationStatusResponseSchema,
@@ -28,6 +30,8 @@ import {
   type Conversation,
   type ConversationBranch,
   type ConversationSearchResult,
+  type ConventionHistoryResponse,
+  type ConventionReadStatusResponse,
   type DocumentationSearchResponse,
   type DocumentationStatusResponse,
   type DocumentationTarget,
@@ -70,6 +74,16 @@ export async function getUsageStatus(): Promise<UsageStatus> {
 export async function getAssistantStatus(): Promise<AssistantStatus> {
   const response = await fetch("/api/v1/status");
   return assistantStatusSchema.parse(await parseJson(response));
+}
+
+export async function getConventionStatus(): Promise<ConventionReadStatusResponse> {
+  const response = await fetch("/api/v1/conventions");
+  return conventionReadStatusResponseSchema.parse(await parseJson(response));
+}
+
+export async function getConventionHistory(conventionId: string): Promise<ConventionHistoryResponse> {
+  const response = await fetch(`/api/v1/conventions/${encodeURIComponent(conventionId)}/history`);
+  return conventionHistoryResponseSchema.parse(await parseJson(response));
 }
 
 export async function getDocumentationStatus(): Promise<DocumentationStatusResponse> {

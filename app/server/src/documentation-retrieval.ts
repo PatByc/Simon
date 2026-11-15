@@ -61,7 +61,7 @@ export class DocumentationRetrievalService {
       topicCount: this.store.listTopics().length,
       currentSourceCount: sources.filter((source) => source.state === "ready" || source.state === "partial").length,
       blockedSourceCount: sources.filter((source) => source.state === "blocked").length,
-      partial: sources.some((source) => source.state === "partial" || source.state === "blocked" || source.state === "failed"),
+      partial: sources.some((source) => ["indexing", "partial", "stale", "blocked", "failed"].includes(source.state)),
       statusNote: sources.length === 0 ? "No documentation sources are configured." : "Documentation sources are independent from engineering snapshots.",
     });
   }

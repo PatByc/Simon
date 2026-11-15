@@ -5,19 +5,16 @@ import {
   attachEngineeringRequestSchema,
   createEngineeringSnapshotRequestSchema,
   createConversationRequestSchema,
-  createConventionProposalRequestSchema,
   createRunRequestSchema,
-  conventionProposalDecisionRequestSchema,
   documentationSearchRequestSchema,
   editRunRequestSchema,
   engineeringSearchRequestSchema,
   knowledgeSearchRequestSchema,
   proposalDecisionSchema,
-  retireConventionRequestSchema,
-  reviseConventionRequestSchema,
   updateConversationRequestSchema,
   updateRuntimeRequestSchema,
   type ApiError,
+  type Conversation,
   type StreamEvent,
 } from "@simon/contracts";
 import type { AssistantRuntime } from "./assistant-runtime.js";
@@ -48,6 +45,10 @@ export interface BuildAppOptions {
 
 function apiError(code: string, message: string): ApiError {
   return apiErrorSchema.parse({ code, message, correlationId: randomUUID() });
+}
+
+function publicConversation(conversation: Conversation): Conversation {
+  return { ...conversation, piSessionId: null };
 }
 
 function formatSse(event: StreamEvent): string {
@@ -88,7 +89,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.decorate("simonStore", store);
 
-  app.addHook("onSend", async (_request, reply, payload) => {
+  app.addHook("onSend", async (request, reply, payload) => {
+    if (request.url.startsWith("/api/") && !reply.hasHeader("Cache-Control")) reply.header("Cache-Control", "no-store");
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("Referrer-Policy", "no-referrer");
     reply.header("X-Frame-Options", "DENY");
@@ -108,36 +110,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.get("/api/v1/status", async () => assistant.getStatus());
 
-  app.get("/api/v1/conventions", async () => conventions.status());
+  app.get("/api/v1/conventions", async () => conventions.readStatus());
 
-  app.post("/api/v1/conventions/proposals", async (request, reply) => {
-    const parsed = createConventionProposalRequestSchema.safeParse(request.body);
-    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid authorized convention examples"));
-    try { return reply.code(201).send({ proposals: conventions.propose(parsed.data) }); }
-    catch (error) { return reply.code(409).send(apiError("convention_proposal_failed", error instanceof Error ? error.message : "Convention proposal failed")); }
-  });
-
-  app.get<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/history", async (request) => conventions.history(request.params.conventionId));
-
-  app.post<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/decision", async (request, reply) => {
-    const parsed = conventionProposalDecisionRequestSchema.safeParse(request.body);
-    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid convention decision"));
-    try { return { revision: conventions.decide(request.params.conventionId, parsed.data) }; }
-    catch (error) { return reply.code(409).send(apiError("convention_decision_failed", error instanceof Error ? error.message : "Convention decision failed")); }
-  });
-
-  app.post<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/revisions", async (request, reply) => {
-    const parsed = reviseConventionRequestSchema.safeParse(request.body);
-    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid convention revision"));
-    try { return reply.code(201).send(conventions.revise(request.params.conventionId, parsed.data)); }
-    catch (error) { return reply.code(409).send(apiError("convention_revision_failed", error instanceof Error ? error.message : "Convention revision failed")); }
-  });
-
-  app.post<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/retirement", async (request, reply) => {
-    const parsed = retireConventionRequestSchema.safeParse(request.body);
-    if (!parsed.success) return reply.code(400).send(apiError("invalid_request", "Invalid convention retirement"));
-    try { return reply.code(201).send(conventions.retire(request.params.conventionId, parsed.data)); }
-    catch (error) { return reply.code(409).send(apiError("convention_retirement_failed", error instanceof Error ? error.message : "Convention retirement failed")); }
+  app.get<{ Params: { conventionId: string } }>("/api/v1/conventions/:conventionId/history", async (request, reply) => {
+    const history = conventions.readHistory(request.params.conventionId);
+    return history ?? reply.code(404).send(apiError("convention_not_found", "Convention not found"));
   });
 
   app.get("/api/v1/documentation/status", async () => documentationRetrieval.status());
@@ -316,7 +293,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.get("/api/v1/conversations", async () => ({
     conversations: [...store.conversations.values()].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt),
-    ),
+    ).map(publicConversation),
   }));
 
   app.get<{ Querystring: { q?: string } }>(
@@ -333,7 +310,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           // A missing or unreadable transcript must not prevent searching other local conversations.
         }
       }
-      return { query, results: store.searchConversations(query) };
+      return { query, results: store.searchConversations(query).map((result) => ({ ...result, conversation: publicConversation(result.conversation) })) };
     },
   );
 
@@ -344,7 +321,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (!conversation) {
         return reply.code(404).send(apiError("conversation_not_found", "Conversation not found"));
       }
-      return conversation;
+      return publicConversation(conversation);
     },
   );
 
@@ -422,12 +399,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!parsed.success) {
       return reply.code(400).send(apiError("invalid_request", "Invalid conversation request"));
     }
-    return reply.code(201).send(
+    return reply.code(201).send(publicConversation(
       store.createConversation({
         title: parsed.data.title,
         approvalMode: parsed.data.approvalMode,
       }),
-    );
+    ));
   });
 
   app.patch<{ Params: { conversationId: string } }>(
@@ -446,7 +423,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (!conversation) {
         return reply.code(404).send(apiError("conversation_not_found", "Conversation not found"));
       }
-      return conversation;
+      return publicConversation(conversation);
     },
   );
 

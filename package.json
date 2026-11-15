@@ -16,6 +16,8 @@
     "dev:server": "npm run dev --workspace @simon/server",
     "start": "npm run build && npm run start --workspace @simon/server",
     "doctor": "npm run doctor --workspace @simon/server",
+    "qualify:m3.1-startup": "npm run build --workspace @simon/server && node scripts/m3-1-startup-qualify.mjs",
+    "qualify:m3.1-retrieval": "npm run build --workspace @simon/server && node scripts/m3-1-retrieval-benchmark.mjs",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },

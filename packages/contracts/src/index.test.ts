@@ -3,6 +3,8 @@ import {
   CONTRACT_SCHEMA_VERSION,
   conventionDecisionSchema,
   conventionDraftSchema,
+  conventionHistoryResponseSchema,
+  conventionReadStatusResponseSchema,
   conventionRevisionSchema,
   conventionStatusResponseSchema,
   conversationSchema,
@@ -60,6 +62,12 @@ describe("M3 convention lifecycle contracts", () => {
     expect(conventionDecisionSchema.parse(decision).hostRecorded).toBe(true);
     expect(conventionRevisionSchema.parse(revision).revision).toBe(1);
     expect(conventionStatusResponseSchema.parse({ proposed: [draft], active: [revision], retired: [], rejectedCount: 0 }).active).toHaveLength(1);
+    expect(conventionReadStatusResponseSchema.parse({
+      proposed: [{ conventionId: draft.conventionId, authority: "inferred-convention", state: "proposed", title: draft.title, scope: draft.scope, confidence: draft.confidence, latestRevisionId: null, latestRevision: null, evidenceCount: 1, exceptionCount: 1, updatedAt: occurredAt }],
+      active: [{ conventionId: revision.conventionId, authority: "approved-convention", state: "approved", title: revision.title, scope: revision.scope, confidence: null, latestRevisionId: revision.revisionId, latestRevision: 1, evidenceCount: 1, exceptionCount: 1, updatedAt: occurredAt }],
+      rejected: [], retired: [],
+    }).active).toHaveLength(1);
+    expect(conventionHistoryResponseSchema.parse({ conventionId: draft.conventionId, draft, decisions: [decision], revisions: [revision] }).revisions).toHaveLength(1);
   });
 
   it("rejects self-approval, missing evidence, mutable states, and unrecorded decisions", () => {
@@ -67,6 +75,8 @@ describe("M3 convention lifecycle contracts", () => {
     expect(() => conventionDecisionSchema.parse({ ...decision, hostRecorded: false })).toThrow();
     expect(() => conventionRevisionSchema.parse({ ...revision, state: "proposed" })).toThrow();
     expect(() => conventionRevisionSchema.parse({ ...revision, decision: { ...decision, decidedBy: "" } })).toThrow();
+    expect(() => conventionReadStatusResponseSchema.parse({ proposed: [{ conventionId: digest, authority: "approved-convention", state: "proposed", title: draft.title, scope: draft.scope, confidence: draft.confidence, latestRevisionId: null, latestRevision: null, evidenceCount: 0, exceptionCount: 0, updatedAt: occurredAt }], active: [], rejected: [], retired: [] })).toThrow();
+    expect(() => conventionHistoryResponseSchema.parse({ conventionId: digest, draft, decisions: [], revisions: [], extra: true })).toThrow();
   });
 });
 

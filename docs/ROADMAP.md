@@ -31,12 +31,20 @@ Manual browser qualification and localhost product acceptance are recorded in `d
 - Kept observed project evidence, official documentation, inferred conventions, and approved conventions distinct in contracts, policy, prompts, persistence, and UI.
 - Live-qualified installed STEP 7 V20 Update 7 retrieval, grounded Pi answers, convention lifecycle, and restart persistence.
 
-## Now — Stabilization and release hygiene
+## Completed — M3.1 stabilization and productization
 
-- Repeat the complete localhost acceptance gate after M3 integration.
-- Preserve source-rights and privacy evidence and keep official-online ingestion blocked until separately authorized.
-- Keep Electron packaging optional and deferred; the accepted product boundary remains the loopback production application.
-- Do not authorize writes merely because M3 is complete.
+- Removed convention lifecycle mutation from ordinary browser/Pi HTTP and added a bounded confirmed host CLI.
+- Added read-only convention authority/history UI with proposed, active, rejected, retired, and superseded states.
+- Made installed-help startup idempotent and last-known-good preserving, with isolated startup budgets and qualification.
+- Added a 38-case retrieval benchmark, corrected BM25 relevance ordering, and kept embeddings deferred by evidence.
+- Repeated synthetic, live M1/M2/M3, combined-authority, responsive, accessibility, security, and privacy qualification.
+- Resolved every demonstrated high/medium issue; retained one explicit low large-project timeout limitation.
+
+## Next decision — packaging or M4 research plan
+
+- Desktop packaging remains optional; the accepted product is the loopback production application.
+- M4 remains unauthorized until a separate disposable-project write-research plan and approval boundary are recorded.
+- Official-online ingestion remains blocked until separately verified rights permit it.
 
 ## Later — Controlled engineering changes
 

@@ -103,3 +103,23 @@ Represent project guidance as immutable convention revisions. Evidence may be ob
 **Alternatives considered:** Merge documentation into engineering snapshots; mirror a Siemens corpus into the repository; let Pi browse arbitrary URLs or local help files; use model memory when exact-version evidence is missing; automatically activate majority project patterns; store one mutable convention document.
 
 **Consequences:** Documentation refresh and project snapshot freshness remain independent. Exact target-version evidence ranks above adjacent or unknown applicability, which must be labelled as background or missing. Rights uncertainty fails closed. Convention approval requires explicit backend/UI action and creates a new revision rather than mutating history. M3 remains read-only and introduces no compile, import, save, TIA lifecycle, project mutation, online PLC, shell, filesystem, or arbitrary-network authority.
+
+## M3.1 host-only convention administration — 2026-11-11
+
+**Context:** M3 correctly withheld convention lifecycle tools from Pi, but proposal, decision, revision, and retirement commands were registered on the same loopback Fastify API used by the browser. Hidden or unused HTTP routes are still browser-reachable authority and therefore do not satisfy the intended host-only boundary.
+
+**Decision:** M3.1 adds no authority. Convention status and immutable history may be shown in a read-only browser panel, but proposal, approval, rejection, revision, retirement, and activation must not exist on the ordinary browser/Pi HTTP surface. Those operations move to an explicit Simon-owned host administration interface that calls the convention service directly with bounded validated inputs and engineer intent.
+
+**Alternatives considered:** Keep undocumented mutation routes; add browser approval controls; protect the routes only with UI hiding or prompt policy; add a bearer token to the same browser API.
+
+**Consequences:** Production Fastify exposes convention reads only. Pi and browser code cannot perform convention lifecycle transitions. Host administration requires a separate local operator action and retains immutable decisions/revisions. M3.1 remains read-only with respect to TIA, PLCs, documentation sources, and external systems.
+
+## Preserve last-known-good documentation indexes — 2026-11-15
+
+**Context:** Replacing an installed-help index synchronously on every startup made warm launches slow and allowed a missing, corrupt, unsafe, oversized, interrupted, or locked refresh to erase otherwise valid local evidence.
+
+**Decision:** Fingerprint the configured installed packages before normalization. Reuse an unchanged committed source without replacing its topics. Build changed content before an atomic source replacement. If refresh fails, retain the previous topics and immutable index metadata, mark the source stale/partial with a sanitized failure note, and restore ready state when the same source recovers.
+
+**Alternatives considered:** Reindex every startup; delete the old source before parsing; serve zero topics after any refresh failure; add embeddings or a separate search service during stabilization.
+
+**Consequences:** Warm startup is deterministic and immediately searchable, failed refreshes preserve explicit last-known-good evidence, source status remains truthful, and generated databases stay Simon-owned and ignored. Clean ingestion runs outside the listener path in a local worker. Embeddings remain deferred until the retrieval benchmark demonstrates a material need.

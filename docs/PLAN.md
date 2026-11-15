@@ -1,7 +1,7 @@
 # Simon Implementation Plan and Milestone History
 
-**Status:** Chat foundation, M1 read-only attachment, and M2 source extraction/retrieval are complete; manual localhost product acceptance is active
-**Current scope:** Chat/Pi runtime plus explicit, conversation-bound, read-only TIA Portal V20 inspection and application-owned snapshot retrieval
+**Status:** Chat foundation and read-only M1–M3 are frozen; M3.1 stabilization/productization has passed its consolidated release-candidate gate
+**Current scope:** Chat/Pi runtime, explicit conversation-bound read-only TIA V20 inspection, immutable snapshot retrieval, version-aware installed documentation, and read-only approved-convention evidence
 **Explicitly excluded:** Engineering mutation, compile, import, save, project lifecycle mutation, source generation, online PLC operations, arbitrary shell/filesystem access, and model-controlled TIA lifecycle or export operations
 
 The early sections below preserve the original chat-foundation plan and its historical exclusions. Sections 15 and 16 describe the subsequently accepted M1 and M2 application boundary.
@@ -447,3 +447,13 @@ M3 also adds authorized convention inference and separate convention persistence
 The production loopback application was live-qualified for installed documentation status/search/citations, applicability and unknowns, rights blocking, grounded Pi answers, convention rejection/approval/revision/retirement, and restart persistence. See `docs/M3_LIVE_QUALIFICATION.md` and `docs/M3_CHECKLIST.md`.
 
 M3 remains read-only and does not authorize compilation, save, import, source generation, project mutation, online PLC operations, documentation crawling, arbitrary URL/file ingestion, external-provider upload of Siemens content, or model-controlled approval/lifecycle operations. Electron packaging remains optional release hardening and is still deferred.
+
+## 18. M3.1 amendment — stabilization and productization
+
+M3.1 adds no engineering authority. It removes convention proposal/approval/rejection/revision/retirement routes from ordinary Fastify HTTP, keeps the browser convention surface read-only, and moves lifecycle actions to a bounded direct-service host CLI with explicit confirmation. Public conversation payloads no longer expose internal Pi session identifiers.
+
+Installed-help initialization is deterministic and idempotent. Unchanged warm sources reuse the current 556-topic index; refresh failure preserves searchable last-known-good evidence as stale/partial; clean ingestion runs in a local worker; Pi-heavy modules load only for Pi runtime. API responses use no-store and the loopback security header boundary remains enforced.
+
+Retrieval is gated by a 38-case synthetic/installed benchmark with exact/safety/citation gates at 100% and lexical expected-top-five at 87.5%. A measured SQLite BM25 ordering defect was fixed; embeddings remain deferred because the approved threshold passes. Consolidated browser, live Pi, TIA, responsive, accessibility, security, and privacy qualification resolved six medium findings and accepted one visible low large-project timeout limitation. See `docs/M3_1_LIVE_QUALIFICATION.md`, `docs/M3_1_RETRIEVAL_BENCHMARK.md`, and `docs/M3_1_PRODUCT_ACCEPTANCE.md`.
+
+M3.1 does not authorize M4. Desktop packaging versus disposable-project write research requires a separate recorded decision.

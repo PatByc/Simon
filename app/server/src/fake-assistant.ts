@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { CONTRACT_SCHEMA_VERSION, type AssistantStatus, type ConversationBranch, type RuntimeOptions, type StreamEvent } from "@simon/contracts";
+import { CONTRACT_SCHEMA_VERSION, type AssistantStatus, type ChatMessage, type ConversationBranch, type RuntimeOptions, type StreamEvent } from "@simon/contracts";
 import type { AssistantRuntime } from "./assistant-runtime.js";
 import type { InMemoryStore, StoredRun } from "./store.js";
 
@@ -7,6 +7,7 @@ const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(reso
 
 export class FakeAssistant implements AssistantRuntime {
   readonly name = "fake";
+  private readonly messages = new Map<string, ChatMessage[]>();
 
   constructor(
     private readonly store: InMemoryStore,
@@ -43,8 +44,8 @@ export class FakeAssistant implements AssistantRuntime {
     await this.execute(stored, "Regenerate the previous response");
   }
 
-  async getMessages(): Promise<[]> {
-    return [];
+  async getMessages(conversationId: string): Promise<ChatMessage[]> {
+    return [...(this.messages.get(conversationId) ?? [])];
   }
 
   async getRuntimeOptions(): Promise<RuntimeOptions> {
@@ -62,6 +63,9 @@ export class FakeAssistant implements AssistantRuntime {
 
   async execute(stored: StoredRun, message: string): Promise<void> {
     const { run } = stored;
+    const transcript = this.messages.get(run.conversationId) ?? [];
+    transcript.push({ messageId: randomUUID(), role: "user", text: message });
+    this.messages.set(run.conversationId, transcript);
     run.status = "running";
     this.emit(stored, "run.started", { status: "running" });
 
@@ -79,7 +83,9 @@ export class FakeAssistant implements AssistantRuntime {
     }
 
     this.emit(stored, "activity.completed", { activityId, outcome: "completed" });
-    this.emit(stored, "assistant.message.completed", { messageId: randomUUID(), text });
+    const messageId = randomUUID();
+    transcript.push({ messageId, role: "assistant", text });
+    this.emit(stored, "assistant.message.completed", { messageId, text });
     run.status = "completed";
     run.finishedAt = new Date().toISOString();
     this.emit(stored, "run.completed", { status: "completed" });

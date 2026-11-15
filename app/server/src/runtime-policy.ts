@@ -15,10 +15,12 @@ export const M3_HOST_ONLY_TOOL_NAMES = Object.freeze([
   "simon_documentation_refresh",
   "simon_documentation_fetch_url",
   "simon_documentation_read_file",
+  "simon_convention_propose",
   "simon_convention_approve",
   "simon_convention_reject",
   "simon_convention_revise",
   "simon_convention_retire",
+  "simon_convention_activate",
 ] as const);
 
 export const TIA_READONLY_TOOL_NAMES = Object.freeze([

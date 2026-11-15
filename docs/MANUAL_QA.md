@@ -2,6 +2,10 @@
 
 Automated browser E2E testing is intentionally deferred. Complete this checklist before desktop packaging or regular use.
 
+## M3.1 release-candidate checkpoint — 2026-11-15
+
+The consolidated M3.1 gate in `docs/M3_1_LIVE_QUALIFICATION.md` and `docs/M3_1_PRODUCT_ACCEPTANCE.md` repeated synthetic, live M1/M2/M3, convention, combined-authority, responsive, scaling, accessibility, security, privacy, startup, and retrieval checks. Six medium findings were fixed and regression-tested; one low large-project timeout remains explicitly partial. Required widths and 100/125/150% scale equivalents passed with no horizontal overflow. Electron packaging remains deferred and M4 remains unauthorized.
+
 ## Localhost acceptance checkpoint — 2026-11-11
 
 The focused localhost product gate in `docs/M2_PRODUCT_ACCEPTANCE.md` was completed against the production loopback application. It covered synthetic chat/runtime behavior, explicit M1 attachment, M2 snapshot/retrieval flows, keyboard/accessibility sampling, required responsive widths and display scales, security headers, privacy boundaries, safe detach, and restart behavior. Two observed frontend defects were fixed and browser-reverified: stale search results after an ambiguous query and the model selector not closing on Escape. The full automated workspace gate passed afterward. Electron packaging remains deferred. Unchecked granular items below remain useful as repeatable release-regression checks and are not claims of unobserved behavior.

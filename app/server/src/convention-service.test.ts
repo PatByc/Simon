@@ -9,9 +9,12 @@ describe("ConventionService host-controlled decisions", () => {
   it("keeps inferred patterns proposed until a host-recorded approval creates a revision", () => {
     const service = new ConventionService(); const draft = service.propose({ examples }, now)[0]!;
     expect(service.status()).toMatchObject({ proposed: [{ state: "proposed" }], active: [] });
+    expect(service.readStatus()).toMatchObject({ proposed: [{ authority: "inferred-convention", state: "proposed", latestRevisionId: null }], active: [], rejected: [], retired: [] });
     const revision = service.decide(draft.conventionId, { action: "approve", decidedBy: "engineer", note: "Reviewed." }, now)!;
     expect(revision).toMatchObject({ state: "approved", revision: 1, decision: { action: "approve", decidedBy: "engineer", hostRecorded: true } });
     expect(service.status()).toMatchObject({ proposed: [], active: [{ revisionId: revision.revisionId }] });
+    expect(service.readStatus()).toMatchObject({ proposed: [], active: [{ authority: "approved-convention", state: "approved", latestRevisionId: revision.revisionId }], rejected: [], retired: [] });
+    expect(service.readHistory(draft.conventionId)).toMatchObject({ conventionId: draft.conventionId, draft: { conventionId: draft.conventionId }, decisions: [{ action: "approve" }], revisions: [{ revisionId: revision.revisionId }] });
     expect(() => service.decide(draft.conventionId, { action: "approve", decidedBy: "engineer", note: "Again." }, now)).toThrow("already been decided");
   });
 
@@ -19,6 +22,7 @@ describe("ConventionService host-controlled decisions", () => {
     const service = new ConventionService(); const draft = service.propose({ examples }, now)[0]!;
     expect(service.decide(draft.conventionId, { action: "reject", decidedBy: "engineer", note: "Not representative." }, now)).toBeNull();
     expect(service.status()).toMatchObject({ proposed: [], active: [], rejectedCount: 1 });
+    expect(service.readStatus()).toMatchObject({ proposed: [], active: [], rejected: [{ authority: "inferred-convention", state: "rejected" }], retired: [] });
   });
 
   it("appends immutable revisions and retirement history", () => {
@@ -30,6 +34,8 @@ describe("ConventionService host-controlled decisions", () => {
     expect(retired).toMatchObject({ revision: 3, state: "retired", supersedesRevisionId: second.revisionId });
     expect(service.status()).toMatchObject({ active: [], retired: [{ revisionId: retired.revisionId }] });
     expect(service.history(draft.conventionId).revisions.map((revision) => revision.revision)).toEqual([1, 2, 3]);
+    expect(service.readStatus()).toMatchObject({ active: [], retired: [{ authority: "approved-convention", state: "retired", latestRevision: 3 }] });
+    expect(service.readHistory(draft.conventionId)?.revisions.map((revision) => revision.revision)).toEqual([1, 2, 3]);
   });
 
   it("rejects decisions without a human actor and note", () => {

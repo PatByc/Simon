@@ -16,7 +16,7 @@ describe("inferNamingConventions", () => {
     expect(drafts[0]).toMatchObject({ state: "proposed", confidence: "medium", scope: ["function block"], exceptions: ["LegacyMixer does not use FB_."] });
     expect(drafts[0]!.evidence).toEqual(expect.arrayContaining([expect.objectContaining({ authority: "observed-project", citation: "PLC/Blocks/FB_Valve" })]));
     expect(drafts[0]!.rationale).toContain("host-authorized examples");
-    expect(drafts[0]!.rationale).toContain("not an approved rule");
+    expect(drafts[0]!.rationale).toContain("only an approved immutable revision may guide local practice");
   });
 
   it("does not invent a convention below the repeat threshold", () => {

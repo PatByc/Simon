@@ -57,7 +57,7 @@ export function inferNamingConventions(examples: readonly AuthorizedConventionEx
       state: "proposed",
       title: `${objectKind} naming prefix ${observedPrefix}_`,
       rule: `Use the prefix '${observedPrefix}_' for ${objectKind} names in the observed project scope.`,
-      rationale: `${count} of ${group.length} host-authorized examples (${Math.round(ratio * 100)}%) use this prefix. This is an inferred local pattern, not an approved rule.`,
+      rationale: `${count} of ${group.length} host-authorized examples (${Math.round(ratio * 100)}%) use this prefix. This evidence supports an inferred local pattern; only an approved immutable revision may guide local practice.`,
       scope: [objectKind],
       evidence,
       exceptions,

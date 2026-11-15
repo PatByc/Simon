@@ -33,6 +33,7 @@ import {
   SYNTHETIC_KNOWLEDGE_TOOL_NAME,
   type RuntimePolicy,
 } from "./runtime-policy.js";
+import { SingleFlight } from "./single-flight.js";
 import type { InMemoryStore, StoredRun } from "./store.js";
 
 function extractMessageText(message: unknown): string {
@@ -120,6 +121,7 @@ export function createRestrictedResourceLoader(policy: RuntimePolicy, projectNam
 export class PiAssistant implements AssistantRuntime {
   readonly name = "pi";
   private readonly sessions = new Map<string, ManagedSession>();
+  private readonly sessionInitialization = new SingleFlight<string>();
   private readonly modelRuntimePromise: Promise<ModelRuntime>;
   private readonly policy: RuntimePolicy;
 
@@ -411,7 +413,10 @@ export class PiAssistant implements AssistantRuntime {
   private async getOrCreateSession(conversationId: string): Promise<ManagedSession> {
     const existing = this.sessions.get(conversationId);
     if (existing) return existing;
+    return this.sessionInitialization.run(conversationId, () => this.createSession(conversationId));
+  }
 
+  private async createSession(conversationId: string): Promise<ManagedSession> {
     const existingPath = this.store.getSessionPath(conversationId);
     const sessionManager = existingPath
       ? SessionManager.open(existingPath)

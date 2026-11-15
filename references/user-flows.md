@@ -77,11 +77,20 @@
 
 1. Host code supplies explicitly authorized observed-project examples.
 2. Deterministic inference creates an inactive draft with representative evidence, confidence, and explicit exceptions.
-3. An engineer approves or rejects through a host-controlled decision path; Pi cannot decide.
+3. An engineer approves or rejects through the separate confirmed host CLI; ordinary browser/Pi HTTP exposes status and history only.
 4. Approval creates immutable revision 1. Later edits append superseding revisions and retirement appends a retired revision.
 5. Pi can count and search only active approved revisions and cites revision ID plus project evidence.
 6. Rejected, superseded, and retired revisions remain auditable but do not guide the assistant.
 7. Deterministic checks may report structural findings only; they never claim compilation, runtime correctness, or functional verification.
+8. Browser convention cards expose authority, evidence, exceptions, decisions, and revision chains but no lifecycle controls.
+
+## Start with installed documentation
+
+1. Simon opens the loopback listener and reports truthful source state.
+2. A warm unchanged source is immediately searchable and confirmed by package fingerprint without replacing topics.
+3. A clean or changed source indexes in a local worker and transitions from indexing to ready/partial.
+4. A failed refresh retains the last-known-good topics as stale/partial with a sanitized note.
+5. Missing, corrupt, unsafe, oversized, interrupted, or locked sources never expose paths or erase committed evidence.
 
 ## Review a synthetic proposal
 

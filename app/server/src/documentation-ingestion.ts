@@ -66,6 +66,7 @@ function parseHtmlMetadata(html: string): { title: string; metadata: Readonly<Re
 
 export class InstalledHelpAdapter {
   private readonly root: string;
+  private cachedArchives: readonly { readonly packageName: string; readonly archive: Buffer }[] | null = null;
   constructor(private readonly config: {
     readonly root: string;
     readonly product: string;
@@ -82,24 +83,20 @@ export class InstalledHelpAdapter {
     }
   }
 
+  fingerprint(): string {
+    const limits = this.config.limits ?? DEFAULT_INSTALLED_HELP_LIMITS;
+    return digest(...this.readArchives(limits, Date.now()).map(({ archive }) => archive));
+  }
+
   ingest(): DocumentationIngestionResult {
     const limits = this.config.limits ?? DEFAULT_INSTALLED_HELP_LIMITS;
-    if (this.config.packageAllowlist.length > limits.maxPackages) throw new Error("Installed help package allowlist exceeds the package limit.");
     const started = Date.now();
     const topics: RawDocumentationTopic[] = [];
-    const archiveBuffers: Buffer[] = [];
-    let totalCompressed = 0;
+    const archives = this.readArchives(limits, started);
     let partial = false;
 
-    for (const packageName of [...this.config.packageAllowlist].sort()) {
+    for (const { packageName, archive } of archives) {
       if (Date.now() - started > limits.maxDurationMs) throw new Error("Installed help ingestion exceeded the duration limit.");
-      const packagePath = realpathSync(join(this.root, packageName));
-      const location = relative(this.root, packagePath);
-      if (location.startsWith(`..${sep}`) || location === "..") throw new Error("Installed help package escaped the configured root.");
-      const archive = readFileSync(packagePath);
-      totalCompressed += archive.length;
-      if (totalCompressed > limits.maxTotalCompressedBytes) throw new Error("Installed help packages exceed the total compressed byte limit.");
-      archiveBuffers.push(archive);
       for (const entry of readBoundedZip(archive, limits)) {
         if (!/\.html?$/i.test(entry.name)) continue;
         if (topics.length >= limits.maxTopics) { partial = true; break; }
@@ -115,7 +112,7 @@ export class InstalledHelpAdapter {
       if (partial) break;
     }
 
-    const contentDigest = digest(...archiveBuffers);
+    const contentDigest = digest(...archives.map(({ archive }) => archive));
     const sourceId = digest("installed-help", this.config.product, this.config.version, this.config.update, this.config.locale, contentDigest);
     const now = new Date().toISOString();
     const source = documentationSourceSchema.parse({
@@ -134,9 +131,28 @@ export class InstalledHelpAdapter {
       contentDigest,
       indexedAt: now,
       statusNote: partial ? "Installed help was indexed to the configured topic limit." : "Installed help is indexed locally; redistribution and external-provider use are blocked.",
-      attributes: { packageCount: archiveBuffers.length, topicCount: topics.length, packageNames: [...this.config.packageAllowlist].sort() },
+      attributes: { packageCount: archives.length, topicCount: topics.length, packageNames: archives.map(({ packageName }) => packageName) },
     });
     return { source, topics, partial };
+  }
+
+  private readArchives(limits: InstalledHelpLimits, started: number): readonly { readonly packageName: string; readonly archive: Buffer }[] {
+    if (this.cachedArchives) return this.cachedArchives;
+    if (this.config.packageAllowlist.length > limits.maxPackages) throw new Error("Installed help package allowlist exceeds the package limit.");
+    const archives: Array<{ packageName: string; archive: Buffer }> = [];
+    let totalCompressed = 0;
+    for (const packageName of [...this.config.packageAllowlist].sort()) {
+      if (Date.now() - started > limits.maxDurationMs) throw new Error("Installed help ingestion exceeded the duration limit.");
+      const packagePath = realpathSync(join(this.root, packageName));
+      const location = relative(this.root, packagePath);
+      if (location.startsWith(`..${sep}`) || location === "..") throw new Error("Installed help package escaped the configured root.");
+      const archive = readFileSync(packagePath);
+      totalCompressed += archive.length;
+      if (totalCompressed > limits.maxTotalCompressedBytes) throw new Error("Installed help packages exceed the total compressed byte limit.");
+      archives.push({ packageName, archive });
+    }
+    this.cachedArchives = archives;
+    return archives;
   }
 }
 

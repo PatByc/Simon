@@ -87,6 +87,13 @@ export class DocumentationStore {
 
   close(): void { this.database?.close(); }
 
+  reload(): void {
+    if (!this.database) return;
+    this.sources.clear();
+    this.topics.clear();
+    this.load();
+  }
+
   replaceSource(sourceInput: DocumentationSource, topicInputs: readonly StoredDocumentationTopic[]): void {
     const source = documentationSourceSchema.parse(sourceInput);
     const topics = topicInputs.map(({ topic, content }) => ({
@@ -135,6 +142,14 @@ export class DocumentationStore {
     for (const entry of topics) this.topics.set(entry.topic.topicId, entry);
   }
 
+  updateSource(sourceInput: DocumentationSource): void {
+    const source = documentationSourceSchema.parse(sourceInput);
+    if (!this.sources.has(source.sourceId)) throw new Error("Documentation source was not found.");
+    this.database?.prepare(`UPDATE documentation_sources SET kind = ?, product = ?, version = ?, update_label = ?, locale = ?, state = ?, indexed_at = ?, source_json = ? WHERE source_id = ?`)
+      .run(source.kind, source.product, source.version, source.update, source.locale, source.state, source.indexedAt, JSON.stringify(source), source.sourceId);
+    this.sources.set(source.sourceId, source);
+  }
+
   removeSource(sourceId: string): void {
     this.database?.prepare("DELETE FROM documentation_topic_search WHERE source_id = ?").run(sourceId);
     this.database?.prepare("DELETE FROM documentation_sources WHERE source_id = ?").run(sourceId);
@@ -166,7 +181,7 @@ export class DocumentationStore {
         FROM documentation_topic_search WHERE documentation_topic_search MATCH ? ORDER BY rank, topic_id LIMIT ?`).all(expression, limit) as unknown as SearchRow[];
       return rows.flatMap((row) => {
         const entry = this.topics.get(row.topic_id);
-        return entry ? [{ ...entry, score: 1 / (1 + Math.abs(row.rank)), snippet: row.excerpt }] : [];
+        return entry ? [{ ...entry, score: Math.abs(row.rank), snippet: row.excerpt }] : [];
       });
     }
     return [...this.topics.values()].flatMap((entry) => {

@@ -597,6 +597,41 @@ export const conventionStatusResponseSchema = z.object({
 }).strict();
 export type ConventionStatusResponse = z.infer<typeof conventionStatusResponseSchema>;
 
+export const conventionReadSummarySchema = z.object({
+  conventionId: sha256DigestSchema,
+  authority: z.enum(["inferred-convention", "approved-convention"]),
+  state: z.enum(["proposed", "approved", "rejected", "retired", "superseded"]),
+  title: z.string().min(1).max(300),
+  scope: z.array(z.string().min(1).max(300)).min(1).max(50),
+  confidence: conventionConfidenceSchema.nullable(),
+  latestRevisionId: sha256DigestSchema.nullable(),
+  latestRevision: z.number().int().positive().nullable(),
+  evidenceCount: z.number().int().positive().max(100),
+  exceptionCount: z.number().int().nonnegative().max(50),
+  updatedAt: timestampSchema,
+}).strict().superRefine((value, context) => {
+  const inferred = value.state === "proposed" || value.state === "rejected";
+  if (inferred !== (value.authority === "inferred-convention")) context.addIssue({ code: "custom", message: "Convention authority does not match its state." });
+  if (inferred !== (value.latestRevisionId === null && value.latestRevision === null)) context.addIssue({ code: "custom", message: "Only approved convention states may identify a revision." });
+});
+export type ConventionReadSummary = z.infer<typeof conventionReadSummarySchema>;
+
+export const conventionReadStatusResponseSchema = z.object({
+  proposed: z.array(conventionReadSummarySchema).max(1_000),
+  active: z.array(conventionReadSummarySchema).max(1_000),
+  rejected: z.array(conventionReadSummarySchema).max(1_000),
+  retired: z.array(conventionReadSummarySchema).max(1_000),
+}).strict();
+export type ConventionReadStatusResponse = z.infer<typeof conventionReadStatusResponseSchema>;
+
+export const conventionHistoryResponseSchema = z.object({
+  conventionId: sha256DigestSchema,
+  draft: conventionDraftSchema.nullable(),
+  decisions: z.array(conventionDecisionSchema).max(1_000),
+  revisions: z.array(conventionRevisionSchema).max(1_000),
+}).strict();
+export type ConventionHistoryResponse = z.infer<typeof conventionHistoryResponseSchema>;
+
 export const citedEngineeringReferenceSchema = engineeringReferenceSchema.extend({
   citation: engineeringCitationSchema,
 }).strict();

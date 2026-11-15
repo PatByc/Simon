@@ -8,7 +8,7 @@
 - Storage: SQLite for Simon metadata; Pi sessions for authoritative transcripts.
 - AI runtime: Pi SDK behind a Simon-owned adapter.
 - Browser transport: HTTP commands and Server-Sent Events.
-- Tests: Vitest, React Testing Library, Playwright, backend injection tests.
+- Tests: Vitest, React Testing Library, backend injection tests, and manual/CDP production qualification; Playwright remains deferred.
 - Package management: npm workspaces for the initial repository.
 
 ## ADR-001: Use a TypeScript full stack
@@ -73,3 +73,17 @@
 **Reason:** Instruction claims need source/version evidence, while project conventions need human authority; neither retrieved text nor majority patterns may alter policy or silently become rules.
 **Trade-offs:** Rights or applicability uncertainty fails closed, adjacent-version guidance is background only, refresh workflows are host-controlled, and convention history is append-only rather than a mutable document. Pi receives retrieval tools but no ingestion, URL/file selection, refresh, or approval authority.
 **Date:** 2026-11-11
+
+## ADR-010: Keep convention administration off browser HTTP
+
+**Decision:** M3.1 adds no authority. Expose convention status and immutable history as read-only browser evidence, but move proposal, approval, rejection, revision, retirement, and activation off the ordinary browser/Pi HTTP surface into an explicit Simon-owned host administration interface.
+**Reason:** A hidden or unused loopback HTTP route is still browser-reachable authority and does not satisfy the intended host-only lifecycle boundary.
+**Trade-offs:** Engineers inspect convention evidence in the product but perform lifecycle transitions through a separate bounded local operator action. The application gains a stricter authority boundary at the cost of not offering browser approval controls.
+**Date:** 2026-11-11
+
+## ADR-011: Preserve last-known-good documentation indexes
+
+**Decision:** Fingerprint configured installed-help packages, reuse unchanged committed indexes, replace changed content atomically, and retain prior searchable topics as stale/partial when refresh fails.
+**Reason:** Startup and refresh failures must not erase valid local engineering evidence, and unchanged warm startup should not pay full normalization/replacement cost.
+**Trade-offs:** The UI may intentionally serve older evidence with an explicit stale label while a source is unhealthy. Clean indexing remains asynchronous, and embeddings stay deferred behind the measured retrieval gate.
+**Date:** 2026-11-15

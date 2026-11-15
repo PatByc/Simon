@@ -48,6 +48,32 @@ describe("DocumentationStore", () => {
     database.close();
   });
 
+  it("ranks stronger SQLite BM25 matches before weaker matches", () => {
+    const dir = mkdtempSync(join(tmpdir(), "simon-doc-rank-")); dirs.push(dir);
+    const store = new DocumentationStore(join(dir, "documentation.sqlite"));
+    const weaker = { ...topic, topicId: digest("e"), stableKey: "pkg/other", title: "Other operation", aliases: [] };
+    store.replaceSource(source, [
+      { topic, content: "Create a reference." },
+      { topic: weaker, content: "This unrelated discussion includes ref once." },
+    ]);
+    expect(store.searchLexical("REF", 2).map((entry) => entry.topic.title)).toEqual(["REF", "Other operation"]);
+    store.close();
+  });
+
+  it("updates source status without replacing last known-good topics", () => {
+    const dir = mkdtempSync(join(tmpdir(), "simon-doc-store-")); dirs.push(dir);
+    const path = join(dir, "documentation.sqlite");
+    const first = new DocumentationStore(path);
+    first.replaceSource(source, [{ topic, content: "last known-good" }]);
+    first.updateSource({ ...source, state: "stale", statusNote: "Refresh failed; retained." });
+    expect(first.listTopics()).toEqual([{ topic, content: "last known-good" }]);
+    first.close();
+    const second = new DocumentationStore(path);
+    expect(second.getSource(source.sourceId)).toMatchObject({ state: "stale", statusNote: "Refresh failed; retained." });
+    expect(second.getTopic(topic.topicId)?.content).toBe("last known-good");
+    second.close();
+  });
+
   it("atomically replaces and removes a source's topics", () => {
     const store = new DocumentationStore();
     store.replaceSource(source, [{ topic, content: "first" }]);
@@ -58,6 +84,20 @@ describe("DocumentationStore", () => {
     store.removeSource(source.sourceId);
     expect(store.listSources()).toEqual([]);
     expect(store.listTopics()).toEqual([]);
+  });
+
+  it("preserves the committed index through a database lock and recovers after release", () => {
+    const dir = mkdtempSync(join(tmpdir(), "simon-doc-store-")); dirs.push(dir);
+    const path = join(dir, "documentation.sqlite");
+    const store = new DocumentationStore(path);
+    store.replaceSource(source, [{ topic, content: "committed" }]);
+    const lock = new DatabaseSync(path); lock.exec("BEGIN EXCLUSIVE");
+    expect(() => store.replaceSource({ ...source, statusNote: "replacement" }, [{ topic: { ...topic, title: "Changed" }, content: "changed" }])).toThrow();
+    expect(store.getTopic(topic.topicId)?.content).toBe("committed");
+    lock.exec("ROLLBACK"); lock.close();
+    store.replaceSource({ ...source, statusNote: "replacement" }, [{ topic: { ...topic, title: "Changed" }, content: "changed" }]);
+    expect(store.getTopic(topic.topicId)).toMatchObject({ topic: { title: "Changed" }, content: "changed" });
+    store.close();
   });
 
   it("rejects mismatched or duplicate topic identities", () => {

@@ -31,12 +31,15 @@ The user can:
 - create bounded project snapshots and retrieve cited blocks, types, tags, references, and supported source evidence;
 - see snapshot freshness, partial coverage, ambiguity, and stale-state limitations;
 - search locally indexed, version-aware Siemens installed help with source, applicability, freshness, and rights labels;
-- infer convention drafts only from host-authorized examples and use only engineer-approved immutable revisions as assistant guidance.
+- inspect proposed, approved, rejected, retired, and superseded convention evidence in a read-only authority-labelled panel;
+- run convention lifecycle transitions only through an explicit confirmed host CLI, never browser/Pi HTTP;
+- retain searchable last-known-good installed documentation when refresh fails and reuse unchanged indexes on warm startup;
+- receive only sanitized conversation records while provider credentials and internal Pi session identifiers remain server-side.
 
 ## Non-goals for this slice
 
 - PLC project mutation, compilation, import, save, download, deployment, or online operation.
-- Model-controlled TIA attachment, detach, snapshot refresh, source export, artifact lifecycle, documentation ingestion/refresh, or convention approval/lifecycle.
+- Model-controlled TIA attachment, detach, snapshot refresh, source export, artifact lifecycle, documentation ingestion/refresh, or convention approval/lifecycle; browser convention lifecycle mutation is also excluded.
 - Raw or arbitrary MCP exposure beyond Simon-owned classified read contracts.
 - Arbitrary URL/file ingestion, general shell or filesystem access, or external-provider upload of proprietary Siemens help.
 - Multi-user SaaS, billing, organizations, or cloud hosting.

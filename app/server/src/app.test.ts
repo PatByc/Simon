@@ -30,6 +30,12 @@ describe("Simon API", () => {
     const response = await app.inject({ method: "GET", url: "/api/v1/status" });
 
     expect(response.statusCode).toBe(200);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers["x-frame-options"]).toBe("DENY");
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers["referrer-policy"]).toBe("no-referrer");
+    expect(response.headers["permissions-policy"]).toContain("camera=()");
+    expect(response.headers["content-security-policy"]).toContain("frame-ancestors 'none'");
     expect(response.json()).toEqual({
       available: true,
       runtime: "fake",
@@ -41,6 +47,19 @@ describe("Simon API", () => {
         scope: "Deterministic local test responses only",
       },
     });
+  });
+
+  it("does not expose internal Pi session identifiers through conversation APIs", async () => {
+    const { app, store } = createTestApp();
+    const created = await app.inject({ method: "POST", url: "/api/v1/conversations", payload: {} });
+    const conversationId = created.json().conversationId as string;
+    store.setSessionReference(conversationId, "internal-provider-session", "C:/private/session.jsonl");
+    const single = await app.inject({ method: "GET", url: `/api/v1/conversations/${conversationId}` });
+    const list = await app.inject({ method: "GET", url: "/api/v1/conversations" });
+    expect(single.json().piSessionId).toBeNull();
+    expect(list.json().conversations[0].piSessionId).toBeNull();
+    expect(JSON.stringify(list.json())).not.toContain("internal-provider-session");
+    expect(JSON.stringify(list.json())).not.toContain("session.jsonl");
   });
 
   it("keeps engineering lifecycle operations behind host-controlled endpoints", async () => {
@@ -338,6 +357,11 @@ describe("Simon API", () => {
     );
     expect(stored?.events.at(0)?.eventType).toBe("run.started");
     expect(stored?.events.at(-1)?.eventType).toBe("run.completed");
+    const messages = await app.inject({ method: "GET", url: `/api/v1/conversations/${conversationId}/messages` });
+    expect(messages.json()).toEqual({ messages: [
+      expect.objectContaining({ role: "user", text: "Hello" }),
+      expect.objectContaining({ role: "assistant", text: "Simon received: Hello" }),
+    ] });
   });
 
   it("rejects a second run while a conversation is busy", async () => {

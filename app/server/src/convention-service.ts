@@ -5,13 +5,17 @@ import {
   approvedConventionSearchResponseSchema,
   conventionDecisionSchema,
   conventionDraftSchema,
+  conventionHistoryResponseSchema,
   conventionProposalDecisionRequestSchema,
+  conventionReadStatusResponseSchema,
   conventionRevisionSchema,
   conventionStatusResponseSchema,
   createConventionProposalRequestSchema,
   retireConventionRequestSchema,
   reviseConventionRequestSchema,
   type ConventionDraft,
+  type ConventionHistoryResponse,
+  type ConventionReadStatusResponse,
   type ConventionRevision,
   type ConventionStatusResponse,
   type CreateConventionProposalRequest,
@@ -70,6 +74,36 @@ export class ConventionService {
 
   history(conventionId: string): { readonly draft: ConventionDraft | null; readonly decisions: ReturnType<ConventionStore["listDecisions"]>; readonly revisions: readonly ConventionRevision[] } {
     return { draft: this.store.getDraft(conventionId), decisions: this.store.listDecisions(conventionId), revisions: this.store.listRevisions(conventionId) };
+  }
+
+  readHistory(conventionId: string): ConventionHistoryResponse | null {
+    const history = this.history(conventionId);
+    if (!history.draft && history.decisions.length === 0 && history.revisions.length === 0) return null;
+    return conventionHistoryResponseSchema.parse({ conventionId, draft: history.draft, decisions: history.decisions.map(({ decision }) => decision), revisions: history.revisions });
+  }
+
+  readStatus(): ConventionReadStatusResponse {
+    const status = this.status();
+    const rejectedDecisions = this.store.listDecisions().filter(({ decision }) => decision.action === "reject");
+    const draftSummary = (draft: ConventionDraft, state: "proposed" | "rejected", updatedAt: string) => ({
+      conventionId: draft.conventionId, authority: "inferred-convention" as const, state, title: draft.title, scope: draft.scope,
+      confidence: draft.confidence, latestRevisionId: null, latestRevision: null, evidenceCount: draft.evidence.length,
+      exceptionCount: draft.exceptions.length, updatedAt,
+    });
+    const revisionSummary = (revision: ConventionRevision) => ({
+      conventionId: revision.conventionId, authority: "approved-convention" as const, state: revision.state, title: revision.title,
+      scope: revision.scope, confidence: null, latestRevisionId: revision.revisionId, latestRevision: revision.revision,
+      evidenceCount: revision.evidence.length, exceptionCount: revision.exceptions.length, updatedAt: revision.approvedAt,
+    });
+    return conventionReadStatusResponseSchema.parse({
+      proposed: status.proposed.map((draft) => draftSummary(draft, "proposed", draft.createdAt)),
+      active: status.active.map(revisionSummary),
+      rejected: rejectedDecisions.flatMap(({ conventionId, decision }) => {
+        const draft = this.store.getDraft(conventionId);
+        return draft ? [draftSummary(draft, "rejected", decision.decidedAt)] : [];
+      }),
+      retired: status.retired.map(revisionSummary),
+    });
   }
 
   searchApproved(input: unknown) {
