@@ -1,7 +1,7 @@
 # Simon Implementation Plan and Milestone History
 
-**Status:** Chat foundation and read-only M1–M3 are frozen; M3.1 stabilization/productization has passed its consolidated release-candidate gate
-**Current scope:** Chat/Pi runtime, explicit conversation-bound read-only TIA V20 inspection, immutable snapshot retrieval, version-aware installed documentation, and read-only approved-convention evidence
+**Status:** Chat foundation and read-only M1–M3.1 are frozen; P1 Windows desktop packaging is active
+**Current scope:** Package the accepted React/Fastify/Pi read-only application as a local Windows Electron app without expanding engineering authority
 **Explicitly excluded:** Engineering mutation, compile, import, save, project lifecycle mutation, source generation, online PLC operations, arbitrary shell/filesystem access, and model-controlled TIA lifecycle or export operations
 
 The early sections below preserve the original chat-foundation plan and its historical exclusions. Sections 15 and 16 describe the subsequently accepted M1 and M2 application boundary.
@@ -457,3 +457,13 @@ Installed-help initialization is deterministic and idempotent. Unchanged warm so
 Retrieval is gated by a 38-case synthetic/installed benchmark with exact/safety/citation gates at 100% and lexical expected-top-five at 87.5%. A measured SQLite BM25 ordering defect was fixed; embeddings remain deferred because the approved threshold passes. Consolidated browser, live Pi, TIA, responsive, accessibility, security, and privacy qualification resolved six medium findings and accepted one visible low large-project timeout limitation. The accepted M3.1 baseline is commit `8376401`.
 
 M3.1 does not authorize M4. The separate post-M3.1 decision selects desktop packaging as the next planning track while preserving the frozen read-only authority boundary; M4 write research remains unauthorized.
+
+## 19. P1 amendment — Windows desktop packaging
+
+**Status:** Active
+
+P1 packages Simon as a Windows x64 Electron application. The product-code input is the accepted M3.1 baseline `8376401`; commits `923e713` and `4d45cc3` contain only post-acceptance sequencing and documentation consolidation. Inspection confirmed no application, package, MCP, worker, script, or dependency change between the accepted product baseline and the P1 documentation baseline.
+
+P1 must preserve the current React renderer, loopback Fastify/SSE backend, server-owned Pi integration, explicit read-only TIA attachment, immutable retrieval boundaries, and host-only administration. Packaging grants no compile, save, import, download, deployment, shell, arbitrary filesystem, PLC, documentation-lifecycle, convention-lifecycle, or model-controlled engineering authority.
+
+The first packaged target is Windows 10/11 x64 using Electron and Electron Forge. Installer format, process isolation, dynamic loopback startup, packaged authentication, writable-data placement, resource inclusion, signing, lifecycle cleanup, and acceptance are established incrementally before release. Automatic updates, tray operation, launch-on-login, non-Windows builds, Store distribution, and M4 write research remain outside P1.

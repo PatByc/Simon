@@ -40,11 +40,12 @@ Manual browser qualification remains repeatable through `docs/MANUAL_QA.md`; com
 - Repeated synthetic, live M1/M2/M3, combined-authority, responsive, accessibility, security, and privacy qualification.
 - Resolved every demonstrated high/medium issue; retained one explicit low large-project timeout limitation.
 
-## Next — desktop packaging plan
+## Active — P1 Windows desktop packaging
 
-- Package the frozen read-only M3.1 baseline without changing its loopback browser/backend/Pi authority boundary.
-- Write and approve a separate executable packaging plan before implementation; packaging itself grants no engineering authority.
-- Keep M4 write research unauthorized until packaging acceptance completes or the project owner explicitly records a new priority and safety decision.
+- Input: accepted product code `8376401`; documentation-only sequencing/consolidation through `4d45cc3`.
+- Package Simon for Windows x64 with Electron and Electron Forge without changing its loopback browser/backend/Pi authority boundary.
+- Establish process isolation, dynamic authenticated loopback startup, per-user writable data, packaged MCP/TIA resources, safe shutdown, installer behavior, and packaging acceptance.
+- Keep M4 write research unauthorized until P1 acceptance completes or the project owner explicitly records a new priority and safety decision.
 - Official-online ingestion remains blocked until separately verified rights permit it.
 
 ## Later — Controlled engineering changes
