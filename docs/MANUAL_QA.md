@@ -4,11 +4,11 @@ Automated browser E2E testing is intentionally deferred. Complete this checklist
 
 ## M3.1 release-candidate checkpoint — 2026-11-15
 
-The consolidated M3.1 gate in `docs/M3_1_LIVE_QUALIFICATION.md` and `docs/M3_1_PRODUCT_ACCEPTANCE.md` repeated synthetic, live M1/M2/M3, convention, combined-authority, responsive, scaling, accessibility, security, privacy, startup, and retrieval checks. Six medium findings were fixed and regression-tested; one low large-project timeout remains explicitly partial. Required widths and 100/125/150% scale equivalents passed with no horizontal overflow. Desktop packaging is the selected next planning track but is not yet implemented; M4 remains unauthorized.
+The consolidated M3.1 gate repeated synthetic, live M1/M2/M3, convention, combined-authority, responsive, scaling, accessibility, security, privacy, startup, and retrieval checks. Six medium findings were fixed and regression-tested; one low large-project timeout remains explicitly partial. Required widths and 100/125/150% scale equivalents passed with no horizontal overflow. The accepted baseline is commit `8376401`. Desktop packaging is the selected next planning track but is not yet implemented; M4 remains unauthorized.
 
 ## Localhost acceptance checkpoint — 2026-11-11
 
-The focused localhost product gate in `docs/M2_PRODUCT_ACCEPTANCE.md` was completed against the production loopback application. It covered synthetic chat/runtime behavior, explicit M1 attachment, M2 snapshot/retrieval flows, keyboard/accessibility sampling, required responsive widths and display scales, security headers, privacy boundaries, safe detach, and restart behavior. Two observed frontend defects were fixed and browser-reverified: stale search results after an ambiguous query and the model selector not closing on Escape. The full automated workspace gate passed afterward. Electron packaging remains deferred. Unchecked granular items below remain useful as repeatable release-regression checks and are not claims of unobserved behavior.
+The focused localhost product gate was completed against the production loopback application. It covered synthetic chat/runtime behavior, explicit M1 attachment, M2 snapshot/retrieval flows, keyboard/accessibility sampling, required responsive widths and display scales, security headers, privacy boundaries, safe detach, and restart behavior. Two observed frontend defects were fixed and browser-reverified: stale search results after an ambiguous query and the model selector not closing on Escape. The full automated workspace gate passed afterward. Unchecked granular items below remain useful as repeatable release-regression checks and are not claims of unobserved behavior.
 
 ## Setup
 
@@ -135,7 +135,7 @@ Start with:
 - [ ] A conversation already bound to another target cannot silently switch projects.
 - [ ] The engineering controls are keyboard-operable at desktop and mobile widths.
 
-See `docs/M1_CHECKLIST.md` for the complete automated and live gate.
+See `mcp/LIVE_QUALIFICATION.md` for retained sanitized live evidence.
 
 ## M2 engineering snapshot and retrieval
 
@@ -152,7 +152,7 @@ With the same explicit read-only connection:
 - [ ] Restart makes persisted snapshots stale and requires explicit reconnect/refresh.
 - [ ] TIA Portal and the project remain open and unmodified throughout.
 
-See `docs/M2_CHECKLIST.md` and `mcp/M2_LIVE_QUALIFICATION.md` for the complete automated and sanitized live gate.
+See `mcp/M2_LIVE_QUALIFICATION.md` for retained sanitized live evidence.
 
 ## Approval demonstration
 

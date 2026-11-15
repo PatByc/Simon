@@ -430,7 +430,7 @@ Live qualification completed through the Simon MCP façade: process discovery, a
 
 The application now owns explicit TIA process discovery, process-start identity validation, conversation-scoped project bindings, connection epochs, reconnect-required restart behavior, bounded inventory, diagnostics, capability/coverage reporting, and per-tool binding guards. The model cannot discover, select, attach, detach, or switch TIA targets. Application-level live qualification confirmed explicit attachment, real project inventory, a tool-backed Pi answer, safe detach with TIA remaining open, and stale/disconnected behavior after restart.
 
-The M1 engineering gate and localhost browser product acceptance are complete. Evidence is tracked in `docs/MANUAL_QA.md` and `docs/M2_PRODUCT_ACCEPTANCE.md`.
+The M1 engineering gate and localhost browser product acceptance are complete. Repeatable regression coverage remains in `docs/MANUAL_QA.md`; completed milestone evidence is preserved in Git history.
 
 ## 16. M2 amendment — read-only source extraction and retrieval
 
@@ -444,7 +444,7 @@ M3 adds a separate documentation store, bounded installed-help ZIP/HTML ingestio
 
 M3 also adds authorized convention inference and separate convention persistence. Drafts remain inactive. Only host-recorded engineer decisions may approve, reject, revise, or retire conventions. Approval creates append-only immutable revisions with provenance, examples, exceptions, decision metadata, and supersession links. Pi receives count and approved-search tools only.
 
-The production loopback application was live-qualified for installed documentation status/search/citations, applicability and unknowns, rights blocking, grounded Pi answers, convention rejection/approval/revision/retirement, and restart persistence. See `docs/M3_LIVE_QUALIFICATION.md` and `docs/M3_CHECKLIST.md`.
+The production loopback application was live-qualified for installed documentation status/search/citations, applicability and unknowns, rights blocking, grounded Pi answers, convention rejection/approval/revision/retirement, and restart persistence.
 
 M3 remains read-only and does not authorize compilation, save, import, source generation, project mutation, online PLC operations, documentation crawling, arbitrary URL/file ingestion, external-provider upload of Siemens content, or model-controlled approval/lifecycle operations. Electron packaging remains optional release hardening and is still deferred.
 
@@ -454,6 +454,6 @@ M3.1 adds no engineering authority. It removes convention proposal/approval/reje
 
 Installed-help initialization is deterministic and idempotent. Unchanged warm sources reuse the current 556-topic index; refresh failure preserves searchable last-known-good evidence as stale/partial; clean ingestion runs in a local worker; Pi-heavy modules load only for Pi runtime. API responses use no-store and the loopback security header boundary remains enforced.
 
-Retrieval is gated by a 38-case synthetic/installed benchmark with exact/safety/citation gates at 100% and lexical expected-top-five at 87.5%. A measured SQLite BM25 ordering defect was fixed; embeddings remain deferred because the approved threshold passes. Consolidated browser, live Pi, TIA, responsive, accessibility, security, and privacy qualification resolved six medium findings and accepted one visible low large-project timeout limitation. See `docs/M3_1_LIVE_QUALIFICATION.md`, `docs/M3_1_RETRIEVAL_BENCHMARK.md`, and `docs/M3_1_PRODUCT_ACCEPTANCE.md`.
+Retrieval is gated by a 38-case synthetic/installed benchmark with exact/safety/citation gates at 100% and lexical expected-top-five at 87.5%. A measured SQLite BM25 ordering defect was fixed; embeddings remain deferred because the approved threshold passes. Consolidated browser, live Pi, TIA, responsive, accessibility, security, and privacy qualification resolved six medium findings and accepted one visible low large-project timeout limitation. The accepted M3.1 baseline is commit `8376401`.
 
 M3.1 does not authorize M4. The separate post-M3.1 decision selects desktop packaging as the next planning track while preserving the frozen read-only authority boundary; M4 write research remains unauthorized.

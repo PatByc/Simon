@@ -11,7 +11,7 @@
 - Bounded project inventory, capability reporting, diagnostics, and guarded Pi tools.
 - Application-level live qualification of attach, project inventory, Pi read, detach, and reconnect-required restart behavior.
 
-Manual browser qualification and localhost product acceptance are recorded in `docs/MANUAL_QA.md` and `docs/M2_PRODUCT_ACCEPTANCE.md`.
+Manual browser qualification remains repeatable through `docs/MANUAL_QA.md`; completed milestone baselines are preserved in Git history.
 
 ## Completed — M2 source extraction and retrieval
 

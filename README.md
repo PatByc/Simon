@@ -39,7 +39,7 @@ docs/                 Handoffs, plan, roadmap, and decisions
 
 ## Development status
 
-The chat foundation and read-only M1–M3 milestones are frozen. M3.1 stabilization is release-qualified: browser-reachable convention mutation is removed, convention evidence is read-only, startup/indexing preserves last-known-good evidence, retrieval is benchmarked, and consolidated live/browser/security acceptance has no open high or medium finding. See [`docs/M3_1_LIVE_QUALIFICATION.md`](docs/M3_1_LIVE_QUALIFICATION.md), [`docs/M3_1_RETRIEVAL_BENCHMARK.md`](docs/M3_1_RETRIEVAL_BENCHMARK.md), and [`docs/M3_1_PRODUCT_ACCEPTANCE.md`](docs/M3_1_PRODUCT_ACCEPTANCE.md). Desktop packaging is the selected next planning track but is not yet implemented; M4 write research remains unauthorized.
+The chat foundation and read-only M1–M3 milestones are frozen. M3.1 stabilization is release-qualified: browser-reachable convention mutation is removed, convention evidence is read-only, startup/indexing preserves last-known-good evidence, retrieval is benchmarked, and consolidated live/browser/security acceptance has no open high or medium finding. The accepted M3.1 baseline is commit `8376401`. Desktop packaging is the selected next planning track but is not yet implemented; M4 write research remains unauthorized.
 
 ## Commands
 
